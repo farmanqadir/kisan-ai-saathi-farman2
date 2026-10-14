@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ur">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kisan AI Saathi</title>
+<style>
+  :root { --green:#2e7d32; --green-dark:#1b5e20; --green-light:#e8f5e9; --earth:#f6f1e7; --text:#1f2a1f; --muted:#5f6b5f; --border:#d5dccf; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Nastaliq Urdu", sans-serif; background:var(--earth); color:var(--text); line-height:1.6; }
+  header { background:vassr(--green); color:#fff; padding:16px; text-align:center; }
+  header h1 { margin:0; font-size:1.4rem; }
+  header p { margin:4px 0 0; font-size:.95rem; opacity:.92; }
+  main { max-width:760px; margin:0 auto; padding:14px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tab { flex:1; padding:12px; border:2px solid var(--green); background:#fff; color:var(--green-dark); font-size:1rem; font-weight:600; border-radius:10px; cursor:pointer; }
+  .tab.active { background:var(--green); color:#fff; }
+  .panel { display:none; } .panel.active { display:block; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px; }
+  #messages { height:52vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px; }
+  .bubble { max-width:88%; padding:10px 14px; border-radius:14px; white-space:pre-wrap; word-wrap:break-word; }
+  .bot { background:var(--green-light); align-self:flex-start; }
+  .me { background:var(--green); color:#fff; align-self:flex-end; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+  .chip { border:1px solid var(--green); background:#fff; color:var(--green-dark); padding:6px 12px; border-radius:999px; font-size:.88rem; cursor:pointer; }
+  .chat-input { display:flex; gap:8px; margin-top:8px; }
+  .chat-input input { flex:1; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:1rem; }
+  button.primary { background:var(--green); color:#fff; border:0; padding:12px 20px; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; }
+  button.primary:disabled { opacity:.55; cursor:wait; }
+  form label { display:block; font-weight:600; margin:12px 0 4px; }
+  form input, form select, form textarea { width:100%; padding:11px; border:1px solid var(--border); border-radius:10px; font-size:1rem; background:#fff; font-family:inherit; }
+  form button { width:100%; margin-top:16px; }
+  #result { margin-top:14px; white-space:pre-wrap; }
+  .note { font-size:.82rem; color:var(--muted); text-align:center; margin:14px 0 4px; }
+  .typing { opacity:.7; font-style:italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌾 Kisan AI Saathi</h1>
+  <p>Fasal, paani, khaad, bimari: har masle ka aasan hal</p>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="chat">💬 Sawal Poochein</button>
+    <button class="tab" data-tab="advice">🌱 Fasal Mashwara</button>
+  </div>
+
+  <section id="chat" class="panel active">
+    <div class="card">
+      <div id="messages"></div>
+      <div class="chips" id="chips">
+        <button class="chip">Is waqt kaun si fasal lagayen?</button>
+        <button class="chip">Kam muddat mein tayyar hone wali fasal</button>
+        <button class="chip">Gandum mein peela rang aa raha hai</button>
+        <button class="chip">Kapas mein sundi ka ilaaj</button>
+      </div>
+      <div class="chat-input">
+        <input id="q" type="text" placeholder="Apna sawal yahan likhein..." autocomplete="off">
+        <button class="primary" id="send">Bhejein</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="advice" class="panel">
+    <div class="card">
+      <form id="adviceForm">
+        <label>Aap ka ilaqa / zila</label>
+        <input name="location" placeholder="masalan: Multan, Punjab" required>
+
+        <label>Abhi kaun sa mahina / season hai</label>
+        <select name="season">
+          <option>Maujooda mahina (khud andaza lagayen)</option>
+          <option>Rabi (sardi ki fasal, Oct–Dec bijai)</option>
+          <option>Kharif (garmi ki fasal, Apr–Jul bijai)</option>
+          <option>Zaid (chhoti fasal, Feb–Apr)</option>
+        </select>
+
+        <label>Zameen ki qism</label>
+        <select name="soil">
+          <option>Maloom nahi</option>
+          <option>Chikni (clay)</option>
+          <option>Maira (loam)</option>
+          <option>Retli (sandy)</option>
+          <option>Khari / shor wali (saline)</option>
+        </select>
+
+        <label>Paani ka zariya</label>
+        <select name="water">
+          <option>Nahar</option>
+          <option>Tubewell</option>
+          <option>Nahar aur tubewell dono</option>
+          <option>Sirf barish (barani)</option>
+        </select>
+
+        <label>Zameen ka rakba</label>
+        <input name="area" placeholder="masalan: 5 acre">
+
+        <label>Fasal kitne arsay mein chahiye</label>
+        <select name="duration">
+          <option>Koi pabandi nahi</option>
+          <option>Sab se kam muddat (60–90 din)</option>
+          <option>3 se 4 mahine</option>
+          <option>6 mahine ya zyada</option>
+        </select>
+
+        <label>Lagat ki hadd (Rs per acre)</label>
+        <input name="budget" placeholder="masalan: 50,000">
+
+        <label>Pichli fasal kaun si thi</label>
+        <input name="lastCrop" placeholder="masalan: gandum">
+
+        <label>Koi khaas sawal ya masla</label>
+        <textarea name="notes" rows="3" placeholder="Jo bhi batana chahein..."></textarea>
+
+        <button class="primary" type="submit" id="adviceBtn">Mashwara hasil karein</button>
+      </form>
+      <div id="result" class="bubble bot" style="display:none; max-width:100%"></div>
+    </div>
+  </section>
+
+  <p class="note">Ye AI ka mashwara hai. Dawa ya khaad ki miqdar aur bari faislon se pehle apne zarai mahir (agriculture officer) se zaroor mashwara karein.</p>
+</main>
+
+<script>
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab, .panel").forEach((e) => e.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById(t.dataset.tab).classList.add("active");
+    });
+  });
+
+  const box = document.getElementById("messages");
+  const input = document.getElementById("q");
+  const sendBtn = document.getElementById("send");
+  const history = [];
+
+  function addBubble(text, cls) {
+    const d = document.createElement("div");
+    d.className = "bubble " + cls;
+    d.textContent = text;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    return d;
+  }
+
+  addBubble("Assalam o Alaikum! Main Kisan AI Saathi hoon. Fasal, paani, khaad, bimari ya mandi, jo bhi sawal ho poochein. Apna ilaqa aur zameen batayen to behtar mashwara de sakta hoon.", "bot");
+
+  async function send(text) {
+    text = (text || input.value).trim();
+    if (!text) return;
+    input.value = "";
+    document.getElementById("chips").style.display = "none";
+    addBubble(text, "me");
+    history.push({ role: "user", content: text });
+    sendBtn.disabled = true;
+    const wait = addBubble("Soch raha hoon...", "bot typing");
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+      });
+      const data = await r.json();
+      wait.remove();
+      if (!r.ok) throw new Error(data.error);
+      history.push({ role: "assistant", content: data.reply });
+      addBubble(data.reply, "bot");
+    } catch (e) {
+      wait.remove();
+      history.pop();
+      addBubble("Maazrat, " + (e.message || "kuch masla aa gaya") + " Internet check kar ke dobara koshish karein.", "bot");
+    }
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  sendBtn.addEventListener("click", () => send());
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+  document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
+
+  document.getElementById("adviceForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("adviceBtn");
+    const out = document.getElementById("result");
+    btn.disabled = true;
+    btn.textContent = "Mashwara tayyar ho raha hai...";
+    out.style.display = "block";
+    out.className = "bubble bot typing";
+    out.textContent = "Thori der intezar karein...";
+    try {
+      const payload = Object.fromEntries(new FormData(e.target).entries());
+      const r = await fetch("/api/crop-advice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      out.className = "bubble bot";
+      out.textContent = data.reply;
+      out.scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+      out.className = "bubble bot";
+      out.textContent = "Maazrat, " + (err.message || "kuch masla aa gaya") + " Dobara koshish karein.";
+    }
+    btn.disabled = false;
+    btn.textContent = "Mashwara hasil karein";
+  });
+</script>
+</body>
+</html>
