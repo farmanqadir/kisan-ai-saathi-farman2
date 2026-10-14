@@ -170,5 +170,8 @@ if (require.main === module) {
     console.log(`Kisan AI Saathi chal raha hai: http://localhost:${PORT}`);
   });
 }
+app.get("/", (req, res) => {
+  res.json({ message: "Kisan AI Saathi API is Running!" });
+});
 
 module.exports = app;
