@@ -64,7 +64,7 @@
   <!-- Header -->
   <header class="glass-nav sticky top-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <!-- Auto-Designed SVG Crown-Leaf Logo -->
+      <!-- Custom SVG Crown-Leaf Logo -->
       <div class="relative w-10 h-10 flex items-center justify-center">
         <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="45" stroke="url(#logoGlow)" stroke-width="3" class="animate-pulse" />
@@ -91,10 +91,10 @@
         <div class="flex items-center gap-2">
           <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
           <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            PRO AI v2.7
+            GEMINI 2.5 FLASH
           </span>
         </div>
-        <p class="text-[11px] text-slate-400">Executive ChatGPT & Claude Style Agriculture Intelligence</p>
+        <p class="text-[11px] text-slate-400">High-Performance Multilingual Agriculture Intelligence</p>
       </div>
     </div>
 
@@ -124,10 +124,8 @@
   <!-- Main Content Container -->
   <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
 
-    <!-- TAB 1: SMART CHAT PANEL (ChatGPT / Claude Style) -->
+    <!-- TAB 1: CHAT PANEL -->
     <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
-      
-      <!-- Messages Canvas (Empty on Load) -->
       <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[52vh] max-h-[60vh] py-2"></div>
 
       <!-- Quick Action Chips -->
@@ -146,11 +144,10 @@
         </button>
       </div>
 
-      <!-- Floating Input Dock (ChatGPT / Claude Style layout with mic and send together) -->
+      <!-- Floating Input Dock -->
       <div class="glass-card p-2.5 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
         <input id="q" type="text" placeholder="Ask anything in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-3">
         
-        <!-- Voice Mic Button and Send Button Side-by-Side -->
         <div class="flex items-center gap-1.5 shrink-0">
           <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all" title="Record Voice Query">
             <i class="fa-solid fa-microphone text-sm"></i>
@@ -252,14 +249,11 @@
 
   </main>
 
-  <!-- Footer -->
   <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
-    Farman Kisan Hub • Powered by Executive Agriculture Intelligence Engine
+    Farman Kisan Hub • Powered by Gemini 2.5 Flash High-Speed AI Engine
   </footer>
 
-  <!-- Interactivity Script -->
   <script>
-    // Tab Navigation Switcher
     document.querySelectorAll(".tab").forEach((t) => {
       t.addEventListener("click", () => {
         document.querySelectorAll(".tab").forEach((tabBtn) => {
@@ -282,7 +276,6 @@
     const langBadgeText = document.getElementById("langBadgeText");
     const history = [];
 
-    // Language Detection Function
     function detectLanguage(text) {
       const urduPattern = /[\u0600-\u06FF]/;
       if (urduPattern.test(text)) {
@@ -295,7 +288,6 @@
       return { name: "Roman Urdu", code: "rom", instruction: "Respond strictly in Roman Urdu (Urdu written in Latin/English alphabet)." };
     }
 
-    // Voice Recording / Speech-to-Text Integration
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
@@ -316,12 +308,11 @@
       recognition.onstart = () => {
         isRecording = true;
         micBtn.classList.add('text-red-500', 'bg-red-500/10', 'animate-pulse');
-        input.placeholder = "Listening to your voice... Speak now...";
+        input.placeholder = "Listening... Speak now...";
       };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        input.value = transcript;
+        input.value = event.results[0][0].transcript;
       };
 
       recognition.onerror = () => {
@@ -334,15 +325,12 @@
         isRecording = false;
         micBtn.classList.remove('text-red-500', 'bg-red-500/10', 'animate-pulse');
         input.placeholder = "Ask anything in English, Urdu, or Roman Urdu...";
-        if (input.value.trim() !== "") {
-          send();
-        }
+        if (input.value.trim() !== "") send();
       };
     } else {
       micBtn.style.display = 'none';
     }
 
-    // Append Clean Chat Bubble (Without speaker audio icon)
     function addBubble(text, cls) {
       const isUser = cls.includes("me");
       const isUrdu = /[\u0600-\u06FF]/.test(text);
@@ -367,7 +355,6 @@
       return d;
     }
 
-    // Send Chat Handler
     async function send(text) {
       text = (text || input.value).trim();
       if (!text) return;
@@ -413,7 +400,6 @@
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
     document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
 
-    // Form Advice Handler
     document.getElementById("adviceForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = document.getElementById("adviceBtn");
