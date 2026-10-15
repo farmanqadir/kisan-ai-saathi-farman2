@@ -27,28 +27,40 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Upgraded to Gemini 3.8 Flash (Latest high-speed advanced model)
-    const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    // Multiple Models Fallback List (Agar aik fail ho ya high demand ho, to doosra chal parega)
+    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
+    let replyText = null;
 
-    const response = await fetch(geminiURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: lastUserMsg }]
-          }
-        ]
-      })
-    });
+    for (const modelName of modelsToTry) {
+      try {
+        const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    const data = await response.json();
+        const response = await fetch(geminiURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: lastUserMsg }]
+              }
+            ]
+          })
+        });
 
-    if (data.error) {
-      return res.status(200).json({ reply: "Gemini API Error: " + (data.error.message || "Unknown error") });
+        const data = await response.json();
+
+        if (!data.error && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          replyText = data.candidates[0].content.parts[0].text;
+          break; // Agar jawab mil gaya to loop rok do
+        }
+      } catch (err) {
+        console.log(`Model ${modelName} failed, trying next...`);
+      }
     }
 
-    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Maazrat, koi jawab mosool nahi ho saka.";
+    if (!replyText) {
+      replyText = "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein.";
+    }
 
     return res.status(200).json({ reply: replyText });
 
