@@ -17,33 +17,50 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing." });
     }
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Direct official Google Gemini 3.8 Flash endpoint with clean ASCII hyphen
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    // Light, stable, and fast models rotation to bypass high demand spikes
+    const modelsToTry = [
+      "gemini-1.5-flash",
+      "gemini-1.0-pro",
+      "gemini-1.5-pro"
+    ];
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: lastUserMsg }] }]
-      })
-    });
+    let replyText = null;
+    let lastError = "";
 
-    const data = await response.json();
+    for (const model of modelsToTry) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: lastUserMsg }] }]
+          })
+        });
 
-    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+        const data = await response.json();
+
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          replyText = data.candidates[0].content.parts[0].text;
+          break; // Stop loop as soon as a successful response is received
+        } else if (data.error) {
+          lastError = data.error.message;
+        }
+      } catch (err) {
+        lastError = err.message;
+      }
     }
 
-    if (data.error) {
-      return res.status(200).json({ reply: `API Error: ${data.error.message}` });
+    if (!replyText) {
+      return res.status(200).json({ reply: `Notice: Sabhi models par traffic zyada hai. Thori der baad try karein.` });
     }
 
-    return res.status(200).json({ reply: "Response nahi mil saka. Phir se try karein." });
+    return res.status(200).json({ reply: replyText });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
