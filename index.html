@@ -91,7 +91,7 @@
         <div class="flex items-center gap-2">
           <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
           <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            GEMINI 2.5 FLASH
+            GEMINI FLASH AI
           </span>
         </div>
         <p class="text-[11px] text-slate-400">High-Performance Multilingual Agriculture Intelligence</p>
@@ -250,7 +250,7 @@
   </main>
 
   <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
-    Farman Kisan Hub • Powered by Gemini 2.5 Flash High-Speed AI Engine
+    Farman Kisan Hub • Powered by Gemini Flash High-Speed AI Engine
   </footer>
 
   <script>
@@ -380,9 +380,13 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: history }),
         });
+        
         const data = await r.json();
         wait.remove();
-        if (!r.ok) throw new Error(data.error);
+        
+        if (!r.ok || data.error) {
+          throw new Error(data.reply || data.error || "Server connection error");
+        }
 
         history.push({ role: "assistant", content: data.reply });
         addBubble(data.reply, "bot");
@@ -390,7 +394,7 @@
       } catch (e) {
         wait.remove();
         history.pop();
-        addBubble("Sorry, " + (e.message || "an error occurred.") + " Please check your connection and try again.", "bot");
+        addBubble("Assistant response error: " + (e.message || "Please try again."), "bot");
       }
       sendBtn.disabled = false;
       input.focus();
@@ -411,13 +415,13 @@
 
       try {
         const payload = Object.fromEntries(new FormData(e.target).entries());
-        const r = await fetch("/api/crop-advice", {
+        const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ messages: [{ role: "user", content: `Provide detailed crop consultation for: Location: ${payload.location}, Season: ${payload.season}, Soil: ${payload.soil}, Water: ${payload.water}, Area: ${payload.area}, Duration: ${payload.duration}, Budget: ${payload.budget}, Last Crop: ${payload.lastCrop}, Notes: ${payload.notes}` }] }),
         });
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error);
+        if (!r.ok) throw new Error(data.reply || data.error);
         
         out.textContent = data.reply;
         out.scrollIntoView({ behavior: "smooth" });
