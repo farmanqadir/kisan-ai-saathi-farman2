@@ -22,11 +22,12 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Dynamic rotation order to bypass high demand traffic spikes
+    // Most stable and reliable models sequence
     const modelsToTry = [
       "gemini-2.0-flash",
+      "gemini-1.5-flash",
       "gemini-1.5-pro",
-      "gemini-3.8-flash"
+      "gemini-1.0-pro"
     ];
 
     let replyText = null;
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break; // Stop loop as soon as valid response is received
+          break;
         } else if (data?.error?.message) {
           lastError = data.error.message;
         }
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: replyText });
     }
 
-    return res.status(200).json({ reply: `Traffic issue. Please try after a few seconds.` });
+    return res.status(200).json({ reply: "Service temporarily busy. Please try again in a few seconds." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
