@@ -52,13 +52,13 @@ export default async function handler(req, res) {
       modelsToTry = availableModels.length > 0 ? availableModels : ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
     }
 
-    // STRICT INSTRUCTION FOR SHORT & CONCISE REPLIES
+    // STRICT RULES FOR CONCISE, STAR-FREE, EXACT ANSWERS
     const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
 STRICT RULES:
-1. Provide extremely concise, direct, and to-the-point answers.
-2. Do NOT write unnecessary intros, long explanations, or repetitive disclaimers.
-3. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).
-4. Use bullet points only if necessary for clarity. Keep responses short and fast to read.`;
+1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences or simple plain list).
+2. NEVER use markdown characters like stars (*), double stars (**), bullet stars (*), or hashtags (#). Use clean plain text only.
+3. No unnecessary intros, disclaimers, or extra filler paragraphs.
+4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
     let replyText = null;
     let lastError = "";
@@ -93,10 +93,17 @@ STRICT RULES:
     }
 
     if (replyText) {
-      return res.status(200).json({ reply: replyText });
+      // Clean any remaining markdown stars or formatting symbols automatically
+      const cleanReply = replyText
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#/g, '')
+        .trim();
+
+      return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Service error. Please try again." });
+    return res.status(200).json({ reply: "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
