@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const rawMsg = messages[messages.length - 1]?.content || "Hello";
     const cleanUserMsg = typeof rawMsg === 'string' ? rawMsg.replace(/\[SYSTEM INSTRUCTION:.*?\]/g, '').trim() : "Hello";
 
-    // Step 1: Live Fetch available models directly from Google for this API Key
+    // Dynamic Discovery of Active Google Models
     let availableModels = [];
     try {
       const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
@@ -40,7 +40,6 @@ export default async function handler(req, res) {
       console.error("List models fetch error:", e);
     }
 
-    // Recommended active fallback priority order
     const priorityOrder = [
       "gemini-3.8-flash",
       "gemini-3.6-flash",
@@ -48,16 +47,22 @@ export default async function handler(req, res) {
       "gemini-2.0-flash"
     ];
 
-    // Pick available model matching priority, or default to whatever Google active list returned
     let modelsToTry = priorityOrder.filter(m => availableModels.includes(m));
     if (modelsToTry.length === 0) {
       modelsToTry = availableModels.length > 0 ? availableModels : ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
     }
 
+    // STRICT INSTRUCTION FOR SHORT & CONCISE REPLIES
+    const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
+STRICT RULES:
+1. Provide extremely concise, direct, and to-the-point answers.
+2. Do NOT write unnecessary intros, long explanations, or repetitive disclaimers.
+3. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).
+4. Use bullet points only if necessary for clarity. Keep responses short and fast to read.`;
+
     let replyText = null;
     let lastError = "";
 
-    // Step 2: Query active model
     for (const model of modelsToTry) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -68,7 +73,7 @@ export default async function handler(req, res) {
             contents: [
               {
                 role: "user",
-                parts: [{ text: `Aap Farman Kisan Hub ke AI Assistant hain. User ke is sawal ka clear jawab dein: ${cleanUserMsg}` }]
+                parts: [{ text: `${strictSystemPrompt}\n\nUser Question: ${cleanUserMsg}` }]
               }
             ]
           })
@@ -80,7 +85,7 @@ export default async function handler(req, res) {
           replyText = data.candidates[0].content.parts[0].text;
           break;
         } else if (data?.error?.message) {
-          lastError = `[${model}]: ${data.error.message}`;
+          lastError = data.error.message;
         }
       } catch (err) {
         lastError = err.message;
@@ -91,7 +96,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: replyText });
     }
 
-    return res.status(200).json({ reply: `Service error: ${lastError || "Aapki API Key par koi active text generation model nahi mila."}` });
+    return res.status(200).json({ reply: "Service error. Please try again." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
