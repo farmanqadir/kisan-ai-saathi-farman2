@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Ensure headers are strictly JSON
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -26,11 +25,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Error: GEMINI_API_KEY is not set in Vercel Environment Variables." });
     }
 
-    // Get the latest user message
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Direct Gemini 1.5/2.5 Flash REST API endpoint (No external package crash risk)
-    const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Upgraded to Gemini 3.8 Flash (Latest high-speed advanced model)
+    const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(geminiURL, {
       method: "POST",
