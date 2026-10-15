@@ -6,52 +6,32 @@ export default async function handler(req, res) {
 
   try {
     var raw = process.env.GEMINI_API_KEY || '';
-    var key = raw.trim().replace(/"/g, '').replace(/'/g, '').trim();
+    // Zabardasti AIza... wala hissa nikaalo, chahe " " ho ya poori line ho
+    var m = raw.match(/AIza[0-9A-Za-z\-_]{30,}/);
+    var key = m? m[0] : raw.trim().replace(/["' \n\r]/g, '');
 
     if (req.method === 'GET') {
-      return res.status(200).json({ ok: true, len: key.length });
+      return res.status(200).json({ ok:true, len: key.length, first5: key.slice(0,5) });
     }
 
-    // Body ko har tarah se parhne ki koshish
     var body = req.body;
     if (!body) {
       try {
-        var text = await new Promise((resolve) => {
-          var d = '';
-          req.on('data', c => d += c);
-          req.on('end', () => resolve(d));
-        });
-        body = text? JSON.parse(text) : {};
-      } catch { body = {}; }
+        var t = await new Promise(r=>{ var d=''; req.on('data',c=>d+=c); req.on('end',()=>r(d)); });
+        body = t? JSON.parse(t) : {};
+      } catch { body={}; }
     }
-    if (typeof body === 'string') {
-      try { body = JSON.parse(body); } catch { body = {}; }
-    }
+    if (typeof body === 'string') try{ body=JSON.parse(body);}catch{ body={}; }
 
-    var msg = body.message || body.prompt || body.question || '';
-    if (typeof msg === 'string') msg = msg.trim();
-
-    if (!msg) {
-      return res.status(200).json({ reply: 'Bhai message type to karo, khali bhej diya' });
-    }
-    if (!key || key.length < 30) {
-      return res.status(200).json({ reply: 'Vercel me key 53 ki hai, 39 ki honi chahiye. Key me " lage huye hain' });
-    }
+    var msg = (body.message || body.prompt || '').trim();
+    if (!msg) return res.status(200).json({ reply: 'Message khali hai' });
 
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key;
-    var r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: msg }] }] })
-    });
+    var r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{parts:[{text:msg}]}] }) });
     var data = await r.json();
-    if (!r.ok) {
-      return res.status(200).json({ reply: 'Google Error: ' + (data.error?.message || JSON.stringify(data).slice(0,200)) });
-    }
-    var txt = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Jawab nahi mila';
-    return res.status(200).json({ reply: txt });
-
-  } catch (e) {
-    return res.status(200).json({ reply: 'Server Error: ' + e.message });
+    if (!r.ok) return res.status(200).json({ reply: 'Google Error: ' + (data.error?.message || 'key galat') });
+    return res.status(200).json({ reply: data.candidates?.[0]?.content?.parts?.[0]?.text || 'Jawab nahi' });
+  } catch(e) {
+    return res.status(200).json({ reply: 'Server Error: '+ e.message });
   }
 }
