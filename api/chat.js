@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const messages = body?.messages;
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(200).json({ reply: "Request payload format error." });
+      return res.status(200).json({ reply: "Request format error." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -22,47 +22,30 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Standard working models with clean ASCII hyphens
-    const modelsToTry = [
-      "gemini-2.5-flash",
-      "gemini-1.5-flash"
-    ];
+    // Standard working Google Gemini REST API URL
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    let replyText = null;
-    let lastError = "";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: lastUserMsg }] }]
+      })
+    });
 
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: lastUserMsg }] }]
-          })
-        });
+    const data = await response.json();
 
-        const data = await response.json();
+    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+    } 
 
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
-          break; // Stop loop immediately when a valid response arrives
-        } else if (data.error) {
-          lastError = data.error.message || JSON.stringify(data.error);
-        }
-      } catch (err) {
-        lastError = err.message;
-      }
+    if (data.error) {
+      return res.status(200).json({ reply: `Google API Response: ${data.error.message || JSON.stringify(data.error)}` });
     }
 
-    if (!replyText) {
-      return res.status(200).json({ reply: `Google API Notice: ${lastError || "Response generate nahi ho saka. Dobara try karein."}` });
-    }
-
-    return res.status(200).json({ reply: replyText });
+    return res.status(200).json({ reply: "Response generate nahi ho saka. Baraye meherbani dobara try karein." });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server exception error: " + err.message });
+    return res.status(200).json({ reply: "Server error: " + err.message });
   }
 }
