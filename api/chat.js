@@ -1,13 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default async function handler(req, res) {
-  // CORS Headers
+  // Always return JSON headers
+  res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const { messages } = req.body;
@@ -15,37 +18,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid request payload" });
     }
 
-    // Gemini API Setup
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "API Key configure nahi hai." });
+      return res.status(200).json({ 
+        reply: "System Error: GEMINI_API_KEY Vercel Environment Variables mein configure nahi ki gayi." 
+      });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Updated to Gemini 2.5 Flash (Ultra fast & High quota limit)
-    const model = genAI.getGenerativeAIModel({ model: "gemini-2.5-flash" });
+    // Correct SDK method: getGenerativeModel
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Extract prompt from conversation
     const lastUserMsg = messages[messages.length - 1]?.content || "";
 
-    // Set 8-second timeout prevent hanging
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Response limit reached, please try again")), 8000)
+      setTimeout(() => reject(new Error("Timeout")), 10000)
     );
 
     const apiPromise = model.generateContent(lastUserMsg);
-
     const result = await Promise.race([apiPromise, timeoutPromise]);
     const responseText = await result.response.text();
 
     return res.status(200).json({ reply: responseText });
 
   } catch (err) {
-    console.error("Gemini Error:", err);
-    // Automatic fallback error message (never hangs the client)
+    console.error("Gemini API Error:", err);
     return res.status(200).json({ 
-      reply: "Maazrat, network slow hone ki wajah se response delay ho gaya. Baraye meherbani dobara click karein." 
+      reply: "Maazrat, server busy hone ki wajah se response nahi mil saka. Baraye meherbani dobara koshish karein." 
     });
   }
 }
