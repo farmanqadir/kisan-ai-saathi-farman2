@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Direct official Google Gemini 3.8 Flash endpoint
+    // Direct official Google Gemini 3.8 Flash endpoint with clean ASCII hyphen
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
