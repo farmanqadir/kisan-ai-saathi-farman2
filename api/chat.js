@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     var raw = process.env.GEMINI_API_KEY || '';
     // Zabardasti AIza... wala hissa nikaalo, chahe " " ho ya poori line ho
     var m = raw.match(/AIza[0-9A-Za-z\-_]{30,}/);
-    var key = m? m[0] : raw.trim().replace(/["' \n\r]/g, '');
+    var key = m? m[0].slice(0,39) : raw.trim().replace(/["' \n\r]/g, '').slice(0,39);
 
     if (req.method === 'GET') {
       return res.status(200).json({ ok:true, len: key.length, first5: key.slice(0,5) });
