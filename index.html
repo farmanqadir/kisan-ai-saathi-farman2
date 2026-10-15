@@ -5,11 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Farman Kisan Hub | Executive AI Platform</title>
 
-<!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
 
 <script>
@@ -56,7 +53,6 @@
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: rgba(5, 9, 20, 0.5); }
   ::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.6); }
 </style>
 </head>
 <body class="text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
@@ -64,7 +60,6 @@
   <!-- Header -->
   <header class="glass-nav sticky top-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <!-- Custom SVG Crown-Leaf Logo -->
       <div class="relative w-10 h-10 flex items-center justify-center">
         <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="45" stroke="url(#logoGlow)" stroke-width="3" class="animate-pulse" />
@@ -91,23 +86,54 @@
         <div class="flex items-center gap-2">
           <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
           <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            GEMINI FLASH AI
+            FAST AI
           </span>
         </div>
-        <p class="text-[11px] text-slate-400">High-Performance Multilingual Agriculture Intelligence</p>
+        <p class="text-[11px] text-slate-400">Multilingual Agriculture Intelligence</p>
       </div>
     </div>
 
+    <!-- User Auth Status / Action -->
     <div class="flex items-center gap-3">
-      <div id="langBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-emerald-400">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="langBadgeText">Auto-Language Mirroring Active</span>
-      </div>
-      <div class="flex items-center text-xs bg-slate-900 border border-white/10 rounded-lg p-1">
-        <span class="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-medium shadow">System Ready</span>
+      <div id="userSection" class="flex items-center gap-2">
+        <button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold transition-all">
+          Login / Signup
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="glass-card max-w-md w-full p-6 rounded-2xl relative border border-white/10 shadow-2xl">
+      <button id="closeAuth" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <h2 id="authTitle" class="text-xl font-bold text-white mb-2">Welcome Back</h2>
+      <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account to auto-save chat history</p>
+
+      <form id="authForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+          <input id="authEmail" type="email" placeholder="kisan@farm.com" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+          <input id="authPassword" type="password" placeholder="••••••••" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-lg shadow-emerald-600/30">
+          Login
+        </button>
+      </form>
+
+      <p class="text-center text-xs text-slate-400 mt-4">
+        <span id="toggleAuthText">Don't have an account?</span>
+        <button id="toggleAuthBtn" class="text-emerald-400 font-semibold underline ml-1">Sign Up</button>
+      </p>
+    </div>
+  </div>
 
   <!-- Navigation Tabs -->
   <div class="max-w-3xl w-full mx-auto px-4 pt-4">
@@ -121,148 +147,162 @@
     </div>
   </div>
 
-  <!-- Main Content Container -->
+  <!-- Main Content -->
   <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
-
-    <!-- TAB 1: CHAT PANEL -->
     <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
       <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[52vh] max-h-[60vh] py-2"></div>
 
-      <!-- Quick Action Chips -->
       <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
           <span>🌾 Best crop to plant this season?</span>
         </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
           <span>⚡ Short duration crop options</span>
         </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
           <span>🍂 Wheat leaf yellowing treatment</span>
         </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
-          <span>🐛 Pest control for cotton crop</span>
-        </button>
       </div>
 
-      <!-- Floating Input Dock -->
       <div class="glass-card p-2.5 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
         <input id="q" type="text" placeholder="Ask anything in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-3">
-        
-        <div class="flex items-center gap-1.5 shrink-0">
-          <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all" title="Record Voice Query">
-            <i class="fa-solid fa-microphone text-sm"></i>
-          </button>
-          <button id="send" class="primary bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white w-10 h-10 sm:w-auto sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-            <span class="hidden sm:inline">Send</span>
-            <i class="fa-solid fa-paper-plane text-xs"></i>
-          </button>
-        </div>
+        <button id="send" class="primary bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+          Send <i class="fa-solid fa-paper-plane text-xs ml-1"></i>
+        </button>
       </div>
     </section>
 
-    <!-- TAB 2: PRECISION FORM PANEL -->
     <section id="advice" class="panel hidden">
       <div class="glass-card p-6 rounded-2xl border border-white/10 shadow-2xl">
-        <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-emerald-400"></i> Get Detailed Crop Consultation
-        </h2>
-        
+        <h2 class="text-base font-bold text-white mb-4">Crop Consultation Form</h2>
         <form id="adviceForm" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Region / District</label>
-              <input name="location" placeholder="e.g. Multan, Punjab" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Current Month / Season</label>
-              <select name="season" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Current Season (Auto-detect)</option>
-                <option>Rabi (Winter season, Oct–Dec sowing)</option>
-                <option>Kharif (Summer season, Apr–Jul sowing)</option>
-                <option>Zaid (Short season, Feb–Apr)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Soil Type</label>
-              <select name="soil" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Not Sure</option>
-                <option>Clay</option>
-                <option>Loam (Maira)</option>
-                <option>Sandy (Retli)</option>
-                <option>Saline (Khari / Shor)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Water Source</label>
-              <select name="water" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Canal (Nahar)</option>
-                <option>Tubewell</option>
-                <option>Both Canal & Tubewell</option>
-                <option>Rainfed (Barani)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Land Area</label>
-              <input name="area" placeholder="e.g. 5 acres" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Desired Duration</label>
-              <select name="duration" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>No Preference</option>
-                <option>Shortest Duration (60–90 days)</option>
-                <option>3 to 4 months</option>
-                <option>6 months or more</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Budget Limit (PKR per acre)</label>
-              <input name="budget" placeholder="e.g. 50,000" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Previous Crop</label>
-              <input name="lastCrop" placeholder="e.g. Wheat" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Specific Question or Problem</label>
-            <textarea name="notes" rows="3" placeholder="Describe any details or concerns..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
-          </div>
-
-          <button class="primary w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30" type="submit" id="adviceBtn">
-            Get Consultation
-          </button>
+          <input name="location" placeholder="Region / District (e.g. Multan)" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none">
+          <textarea name="notes" rows="3" placeholder="Describe issue..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></textarea>
+          <button class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl text-sm" type="submit" id="adviceBtn">Get Consultation</button>
         </form>
-
-        <div id="result" class="mt-4 p-4 rounded-xl glass-card text-sm leading-relaxed text-slate-200 hidden border border-emerald-500/30"></div>
+        <div id="result" class="mt-4 p-4 rounded-xl glass-card text-sm text-slate-200 hidden"></div>
       </div>
     </section>
-
   </main>
 
   <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
-    Farman Kisan Hub • Powered by Gemini Flash High-Speed AI Engine
+    Farman Kisan Hub • Powered by Gemini AI
   </footer>
 
+  <!-- Firebase Modular Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCu0rYEobmgK0cCmZLroIWguiPqyPhOAeI",
+      authDomain: "farman-5f2fe.firebaseapp.com",
+      projectId: "farman-5f2fe",
+      storageBucket: "farman-5f2fe.firebasestorage.app",
+      messagingSenderId: "392223096053",
+      appId: "1:392223096053:web:9c2d61ad6a0d9e2acb59bc",
+      measurementId: "G-TF8KM4G88G"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let isSignUp = false;
+
+    const authModal = document.getElementById("authModal");
+    const authBtn = document.getElementById("authBtn");
+    const closeAuth = document.getElementById("closeAuth");
+    const authForm = document.getElementById("authForm");
+    const toggleAuthBtn = document.getElementById("toggleAuthBtn");
+    const authTitle = document.getElementById("authTitle");
+    const authSubmitBtn = document.getElementById("authSubmitBtn");
+    const toggleAuthText = document.getElementById("toggleAuthText");
+    const userSection = document.getElementById("userSection");
+
+    authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
+    closeAuth.addEventListener("click", () => authModal.classList.add("hidden"));
+
+    toggleAuthBtn.addEventListener("click", () => {
+      isSignUp = !isSignUp;
+      authTitle.textContent = isSignUp ? "Create Account" : "Welcome Back";
+      authSubmitBtn.textContent = isSignUp ? "Sign Up" : "Login";
+      toggleAuthText.textContent = isSignUp ? "Already have an account?" : "Don't have an account?";
+      toggleAuthBtn.textContent = isSignUp ? "Login" : "Sign Up";
+    });
+
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("authEmail").value;
+      const pass = document.getElementById("authPassword").value;
+
+      try {
+        if (isSignUp) {
+          await createUserWithEmailAndPassword(auth, email, pass);
+        } else {
+          await signInWithEmailAndPassword(auth, email, pass);
+        }
+        authModal.classList.add("hidden");
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        userSection.innerHTML = `
+          <span class="text-xs text-emerald-400 font-medium">${user.email.split('@')[0]}</span>
+          <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs px-2.5 py-1 rounded-lg">Logout</button>
+        `;
+        document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+        loadUserHistory(user.uid);
+      } else {
+        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login / Signup</button>`;
+        document.getElementById("authBtn").addEventListener("click", () => authModal.classList.remove("hidden"));
+      }
+    });
+
+    async function saveChatToCloud(userMsg, botReply) {
+      if (!currentUser) return;
+      try {
+        await addDoc(collection(db, "chats"), {
+          userId: currentUser.uid,
+          userMsg,
+          botReply,
+          createdAt: new Date()
+        });
+      } catch (e) {
+        console.error("Cloud History Error:", e);
+      }
+    }
+
+    async function loadUserHistory(uid) {
+      try {
+        document.getElementById("messages").innerHTML = "";
+        const q = query(collection(db, "chats"), where("userId", "==", uid));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          addBubble(data.userMsg, "me");
+          addBubble(data.botReply, "bot");
+        });
+      } catch (e) {
+        console.error("History loading failed:", e);
+      }
+    }
+
+    window.saveChatToCloud = saveChatToCloud;
+  </script>
+
   <script>
+    // Tab Switching
     document.querySelectorAll(".tab").forEach((t) => {
       t.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach((tabBtn) => {
-          tabBtn.classList.remove("active", "bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white", "shadow-lg");
-          tabBtn.classList.add("text-slate-400");
-        });
-        t.classList.add("active", "bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white", "shadow-lg");
-        t.classList.remove("text-slate-400");
-
+        document.querySelectorAll(".tab").forEach((btn) => btn.classList.remove("bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white"));
+        t.classList.add("bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white");
         document.querySelectorAll(".panel").forEach((p) => p.classList.add("hidden"));
         document.getElementById(t.dataset.tab).classList.remove("hidden");
       });
@@ -271,83 +311,17 @@
     const box = document.getElementById("messages");
     const input = document.getElementById("q");
     const sendBtn = document.getElementById("send");
-    const chipsBox = document.getElementById("chips");
-    const micBtn = document.getElementById("micBtn");
-    const langBadgeText = document.getElementById("langBadgeText");
-    const history = [];
-
-    function detectLanguage(text) {
-      const urduPattern = /[\u0600-\u06FF]/;
-      if (urduPattern.test(text)) {
-        return { name: "اردو (Urdu)", code: "ur", instruction: "Respond strictly in proper Urdu using Arabic/Urdu script." };
-      }
-      const englishWords = /\b(the|is|what|how|why|crop|wheat|disease|fertilizer|water|field|yield|best|can)\b/i;
-      if (englishWords.test(text)) {
-        return { name: "English", code: "en", instruction: "Respond strictly in clear, professional English." };
-      }
-      return { name: "Roman Urdu", code: "rom", instruction: "Respond strictly in Roman Urdu (Urdu written in Latin/English alphabet)." };
-    }
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'ur-PK';
-
-      let isRecording = false;
-
-      micBtn.addEventListener('click', () => {
-        if (!isRecording) {
-          recognition.start();
-        } else {
-          recognition.stop();
-        }
-      });
-
-      recognition.onstart = () => {
-        isRecording = true;
-        micBtn.classList.add('text-red-500', 'bg-red-500/10', 'animate-pulse');
-        input.placeholder = "Listening... Speak now...";
-      };
-
-      recognition.onresult = (event) => {
-        input.value = event.results[0][0].transcript;
-      };
-
-      recognition.onerror = () => {
-        isRecording = false;
-        micBtn.classList.remove('text-red-500', 'bg-red-500/10', 'animate-pulse');
-        input.placeholder = "Ask anything in English, Urdu, or Roman Urdu...";
-      };
-
-      recognition.onend = () => {
-        isRecording = false;
-        micBtn.classList.remove('text-red-500', 'bg-red-500/10', 'animate-pulse');
-        input.placeholder = "Ask anything in English, Urdu, or Roman Urdu...";
-        if (input.value.trim() !== "") send();
-      };
-    } else {
-      micBtn.style.display = 'none';
-    }
 
     function addBubble(text, cls) {
       const isUser = cls.includes("me");
-      const isUrdu = /[\u0600-\u06FF]/.test(text);
-
       const d = document.createElement("div");
       d.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
-      
-      const avatarHTML = `
-        <div class="w-8 h-8 rounded-xl ${isUser ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'} flex items-center justify-center shrink-0 text-xs">
+      d.innerHTML = `
+        <div class="w-8 h-8 rounded-xl ${isUser ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'} flex items-center justify-center shrink-0 text-xs">
           <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'}"></i>
         </div>
-      `;
-
-      d.innerHTML = `
-        ${avatarHTML}
-        <div class="glass-card p-3.5 rounded-2xl ${isUser ? 'rounded-tr-xs bg-emerald-950/30 border-emerald-500/30' : 'rounded-tl-xs'} max-w-[85%] text-sm leading-relaxed text-slate-200">
-          <div class="${isUrdu ? 'font-urdu text-base leading-loose' : ''}">${text}</div>
+        <div class="glass-card p-3 rounded-2xl max-w-[85%] text-sm text-slate-200">
+          ${text}
         </div>
       `;
       box.appendChild(d);
@@ -360,77 +334,33 @@
       if (!text) return;
       input.value = "";
       
-      if (chipsBox) chipsBox.style.display = "none";
-
-      const langInfo = detectLanguage(text);
-      langBadgeText.textContent = `${langInfo.name} Detected`;
-
       addBubble(text, "me");
-
-      const systemInstruction = `[SYSTEM INSTRUCTION: The user is writing in ${langInfo.name}. You MUST reply in the EXACT SAME LANGUAGE and SCRIPT. ${langInfo.instruction}]`;
-      
-      history.push({ role: "user", content: `${systemInstruction}\n\nUser Question: ${text}` });
-
-      sendBtn.disabled = true;
       const wait = addBubble("Processing...", "bot typing");
 
       try {
         const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
         });
-        
         const data = await r.json();
         wait.remove();
-        
-        if (!r.ok || data.error) {
-          throw new Error(data.reply || data.error || "Server connection error");
+
+        const reply = data.reply || "No response received.";
+        addBubble(reply, "bot");
+
+        if (window.saveChatToCloud) {
+          window.saveChatToCloud(text, reply);
         }
-
-        history.push({ role: "assistant", content: data.reply });
-        addBubble(data.reply, "bot");
-
       } catch (e) {
         wait.remove();
-        history.pop();
-        addBubble("Assistant response error: " + (e.message || "Please try again."), "bot");
+        addBubble("Error connecting to server.", "bot");
       }
-      sendBtn.disabled = false;
-      input.focus();
     }
 
     sendBtn.addEventListener("click", () => send());
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
     document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
-
-    document.getElementById("adviceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById("adviceBtn");
-      const out = document.getElementById("result");
-      btn.disabled = true;
-      btn.textContent = "Generating consultation...";
-      out.classList.remove("hidden");
-      out.textContent = "Please wait a moment...";
-
-      try {
-        const payload = Object.fromEntries(new FormData(e.target).entries());
-        const r = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: `Provide detailed crop consultation for: Location: ${payload.location}, Season: ${payload.season}, Soil: ${payload.soil}, Water: ${payload.water}, Area: ${payload.area}, Duration: ${payload.duration}, Budget: ${payload.budget}, Last Crop: ${payload.lastCrop}, Notes: ${payload.notes}` }] }),
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.reply || data.error);
-        
-        out.textContent = data.reply;
-        out.scrollIntoView({ behavior: "smooth" });
-      } catch (err) {
-        out.textContent = "Sorry, " + (err.message || "an error occurred.") + " Please try again.";
-      }
-      btn.disabled = false;
-      btn.textContent = "Get Consultation";
-    });
   </script>
 </body>
 </html>
