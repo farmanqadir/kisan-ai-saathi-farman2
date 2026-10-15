@@ -23,17 +23,15 @@ export default async function handler(req, res) {
     const rawMsg = messages[messages.length - 1]?.content || "Hello";
     const cleanUserMsg = typeof rawMsg === 'string' ? rawMsg.replace(/\[SYSTEM INSTRUCTION:.*?\]/g, '').trim() : "Hello";
 
-    // Direct fast models list (Fastest to Light-weight)
     const modelsToTry = [
       "gemini-2.0-flash",
-      "gemini-1.5-flash",
-      "gemini-2.5-flash"
+      "gemini-1.5-flash"
     ];
 
     const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
 STRICT RULES:
 1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences).
-2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
+2. NEVER use markdown characters like stars, double stars, or hashtags. Use clean plain text only.
 3. No unnecessary intros or disclaimers.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
@@ -76,7 +74,7 @@ STRICT RULES:
       return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
+    return res.status(200).json({ reply: "Server busy, please try again." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
