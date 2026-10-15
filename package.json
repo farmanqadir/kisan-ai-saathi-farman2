@@ -1,7 +1,7 @@
 {
   "name": "kisan-sahayak",
   "version": "1.0.0",
-  "engines": { "node": "20.x" },
+  "engines": { "node": "24.x" },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
