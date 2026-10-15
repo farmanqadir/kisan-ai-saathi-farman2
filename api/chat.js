@@ -27,10 +27,17 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Multiple Models Fallback List (Agar aik fail ho ya high demand ho, to doosra chal parega)
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
+    // Unbreakable Multi-Model Fallback Engine
+    const modelsToTry = [
+      "gemini-1.5-flash",
+      "gemini-1.5-flash-8b",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash-exp"
+    ];
+
     let replyText = null;
 
+    // Retry logic with automatic model switching
     for (const modelName of modelsToTry) {
       try {
         const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -49,23 +56,24 @@ export default async function handler(req, res) {
 
         const data = await response.json();
 
-        if (!data.error && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break; // Agar jawab mil gaya to loop rok do
+          break; // Response success, stop loop
         }
       } catch (err) {
-        console.log(`Model ${modelName} failed, trying next...`);
+        console.log(`Model ${modelName} failed, moving to next backup model...`);
       }
     }
 
+    // Smart fallback answer if all API endpoints are temporarily blocked
     if (!replyText) {
-      replyText = "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein.";
+      replyText = "Zra sa wait karein, network overload ki wajah se request process ho rahi hai. Baraye meherbani 'Send' button par dobara click karein.";
     }
 
     return res.status(200).json({ reply: replyText });
 
   } catch (err) {
     console.error("Serverless Function Error:", err);
-    return res.status(200).json({ reply: "Server error occurred. Please try again." });
+    return res.status(200).json({ reply: "Server connectivity error. Please try clicking send again." });
   }
 }
