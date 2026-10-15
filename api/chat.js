@@ -4,13 +4,8 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(200).json({ reply: "Invalid request method." });
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(200).json({ reply: "Invalid request method." });
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -27,53 +22,38 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Unbreakable Multi-Model Fallback Engine
-    const modelsToTry = [
-      "gemini-1.5-flash",
-      "gemini-1.5-flash-8b",
-      "gemini-1.5-pro",
-      "gemini-2.0-flash-exp"
-    ];
+    // Standard primary and secondary model endpoints
+    const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
+    let replyText = "";
 
-    let replyText = null;
-
-    // Retry logic with automatic model switching
-    for (const modelName of modelsToTry) {
+    for (const model of models) {
       try {
-        const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
+        const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const response = await fetch(geminiURL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: lastUserMsg }]
-              }
-            ]
+            contents: [{ parts: [{ text: lastUserMsg }] }]
           })
         });
 
         const data = await response.json();
-
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break; // Response success, stop loop
+          break;
         }
       } catch (err) {
-        console.log(`Model ${modelName} failed, moving to next backup model...`);
+        console.log(`Failed with model ${model}, trying next...`);
       }
     }
 
-    // Smart fallback answer if all API endpoints are temporarily blocked
     if (!replyText) {
-      replyText = "Zra sa wait karein, network overload ki wajah se request process ho rahi hai. Baraye meherbani 'Send' button par dobara click karein.";
+      replyText = "Kisaan bhai, server busy hone ki wajah se response nahi mil saka. Baraye meherbani thori der baad dobara koshish karein.";
     }
 
     return res.status(200).json({ reply: replyText });
 
   } catch (err) {
-    console.error("Serverless Function Error:", err);
-    return res.status(200).json({ reply: "Server connectivity error. Please try clicking send again." });
+    return res.status(200).json({ reply: "Server error occurred. Please try again." });
   }
 }
