@@ -20,48 +20,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Extract user question
     const rawMsg = messages[messages.length - 1]?.content || "Hello";
     const cleanUserMsg = typeof rawMsg === 'string' ? rawMsg.replace(/\[SYSTEM INSTRUCTION:.*?\]/g, '').trim() : "Hello";
 
-    // Dynamic Discovery of Active Google Models
-    let availableModels = [];
-    try {
-      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-      const listRes = await fetch(listUrl);
-      const listData = await listRes.json();
-
-      if (listData?.models && Array.isArray(listData.models)) {
-        availableModels = listData.models
-          .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
-          .map(m => m.name.replace("models/", ""));
-      }
-    } catch (e) {
-      console.error("List models fetch error:", e);
-    }
-
-    const priorityOrder = [
-      "gemini-3.8-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-2.0-flash"
+    // Direct fast models list (Fastest to Light-weight)
+    const modelsToTry = [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-2.5-flash"
     ];
 
-    let modelsToTry = priorityOrder.filter(m => availableModels.includes(m));
-    if (modelsToTry.length === 0) {
-      modelsToTry = availableModels.length > 0 ? availableModels : ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
-    }
-
-    // STRICT RULES FOR CONCISE, STAR-FREE, EXACT ANSWERS
     const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
 STRICT RULES:
-1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences or simple plain list).
-2. NEVER use markdown characters like stars (*), double stars (**), bullet stars (*), or hashtags (#). Use clean plain text only.
-3. No unnecessary intros, disclaimers, or extra filler paragraphs.
+1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences).
+2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
+3. No unnecessary intros or disclaimers.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
     let replyText = null;
-    let lastError = "";
 
     for (const model of modelsToTry) {
       try {
@@ -84,16 +60,13 @@ STRICT RULES:
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
           break;
-        } else if (data?.error?.message) {
-          lastError = data.error.message;
         }
       } catch (err) {
-        lastError = err.message;
+        continue;
       }
     }
 
     if (replyText) {
-      // Clean any remaining markdown stars or formatting symbols automatically
       const cleanReply = replyText
         .replace(/\*\*/g, '')
         .replace(/\*/g, '')
@@ -103,9 +76,9 @@ STRICT RULES:
       return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein." });
+    return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server exception error: " + err.message });
+    return res.status(200).json({ reply: "Server error: " + err.message });
   }
 }
