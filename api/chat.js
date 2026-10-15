@@ -12,21 +12,20 @@ export default async function handler(req, res) {
     const messages = body?.messages;
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(200).json({ reply: "Request format incorrect." });
+      return res.status(200).json({ reply: "Request payload format error." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Error: Vercel environment variables mein GEMINI_API_KEY set nahi hai." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY Vercel environment variables mein missing hai." });
     }
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Standard ASCII hyphen models list
+    // Standard working models with clean ASCII hyphens
     const modelsToTry = [
-      "gemini-1.5-flash",
-      "gemini-1.5-pro",
-      "gemini-2.0-flash-exp"
+      "gemini-2.5-flash",
+      "gemini-1.5-flash"
     ];
 
     let replyText = null;
@@ -35,6 +34,7 @@ export default async function handler(req, res) {
     for (const model of modelsToTry) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -47,9 +47,9 @@ export default async function handler(req, res) {
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break; // Stop loop as soon as response is successful
+          break; // Stop loop immediately when a valid response arrives
         } else if (data.error) {
-          lastError = data.error.message;
+          lastError = data.error.message || JSON.stringify(data.error);
         }
       } catch (err) {
         lastError = err.message;
@@ -57,12 +57,12 @@ export default async function handler(req, res) {
     }
 
     if (!replyText) {
-      return res.status(200).json({ reply: `API Notice: ${lastError || "Response fetch nahi ho saka, dobara click karein."}` });
+      return res.status(200).json({ reply: `Google API Notice: ${lastError || "Response generate nahi ho saka. Dobara try karein."}` });
     }
 
     return res.status(200).json({ reply: replyText });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server error: " + err.message });
+    return res.status(200).json({ reply: "Server exception error: " + err.message });
   }
 }
