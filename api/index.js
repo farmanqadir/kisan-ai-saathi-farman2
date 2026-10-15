@@ -10,11 +10,16 @@ module.exports = async (req, res) => {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
       const raw = Buffer.concat(chunks).toString() || '{}';
-      body = JSON.parse(raw);
+      try { body = JSON.parse(raw); } catch { body = {}; }
     }
 
-    const message = body.message;
-    if (!message) return res.status(400).json({ error: 'Message missing' });
+    // Yahan fix hai - chahe frontend kuch bhi bheje, pakad lega
+    const message = body.message || body.prompt || body.question || body.text || body.query || body.input;
+
+    if (!message) {
+      console.log('Body received:', body);
+      return res.status(400).json({ error: 'Message missing' });
+    }
 
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
@@ -22,8 +27,9 @@ module.exports = async (req, res) => {
       body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] })
     });
     const data = await r.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Jawab nahi mila';
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Maazrat, jawab nahi mila.';
     return res.json({ reply });
+
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
