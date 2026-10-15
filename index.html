@@ -73,7 +73,7 @@
         <div class="flex items-center gap-2">
           <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
           <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            PRO AI v2.5
+            PRO AI v2.6
           </span>
         </div>
         <p class="text-[11px] text-slate-400">Next-Gen Multilingual Agricultural Engine</p>
@@ -128,12 +128,12 @@
         </button>
       </div>
 
-      <!-- Input Dock -->
+      <!-- Input Dock with Voice Recording Option -->
       <div class="glass-card p-2 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
-        <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all" title="Voice Input (Speak your query)">
+        <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all relative" title="Record Voice Query">
           <i class="fa-solid fa-microphone text-sm"></i>
         </button>
-        <input id="q" type="text" placeholder="Type your query in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-2">
+        <input id="q" type="text" placeholder="Type or click mic to speak your query in any language..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-2">
         <button id="send" class="primary bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
           <span>Send</span>
           <i class="fa-solid fa-paper-plane text-xs"></i>
@@ -273,7 +273,7 @@
       return { name: "Roman Urdu", code: "rom", instruction: "Respond strictly in Roman Urdu (Urdu written in Latin/English alphabet)." };
     }
 
-    // Text To Speech (TTS Output)
+    // Text To Speech (Manual Audio Playback via Speaker Icon Only)
     function speakText(text) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -285,31 +285,48 @@
       }
     }
 
-    // Speech To Text (Voice Mic Input)
+    // Voice Recording / Speech-to-Text Integration
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true; // Show text live as user speaks
+      recognition.lang = 'ur-PK'; // Support Urdu/English voice recognition
+
+      let isRecording = false;
 
       micBtn.addEventListener('click', () => {
-        micBtn.classList.add('text-red-500', 'animate-pulse');
-        recognition.start();
+        if (!isRecording) {
+          recognition.start();
+        } else {
+          recognition.stop();
+        }
       });
+
+      recognition.onstart = () => {
+        isRecording = true;
+        micBtn.classList.add('text-red-500', 'bg-red-500/10', 'animate-pulse');
+        input.placeholder = "Listening to your voice... Speak now...";
+      };
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         input.value = transcript;
-        micBtn.classList.remove('text-red-500', 'animate-pulse');
-        send();
       };
 
       recognition.onerror = () => {
-        micBtn.classList.remove('text-red-500', 'animate-pulse');
+        isRecording = false;
+        micBtn.classList.remove('text-red-500', 'bg-red-500/10', 'animate-pulse');
+        input.placeholder = "Type or click mic to speak your query in any language...";
       };
 
       recognition.onend = () => {
-        micBtn.classList.remove('text-red-500', 'animate-pulse');
+        isRecording = false;
+        micBtn.classList.remove('text-red-500', 'bg-red-500/10', 'animate-pulse');
+        input.placeholder = "Type or click mic to speak your query in any language...";
+        if (input.value.trim() !== "") {
+          send(); // Automatically send query after speech finishes
+        }
       };
     } else {
       micBtn.style.display = 'none';
@@ -329,6 +346,7 @@
         </div>
       `;
 
+      // Speaker button added ONLY for manual audio playback (auto-play removed)
       const audioBtnHTML = !isUser ? `
         <button onclick="speakText(this.nextElementSibling.innerText)" class="text-slate-500 hover:text-emerald-400 text-xs ml-2 float-right pt-1" title="Listen Audio">
           <i class="fa-solid fa-volume-high"></i>
@@ -379,7 +397,7 @@
 
         history.push({ role: "assistant", content: data.reply });
         addBubble(data.reply, "bot");
-        speakText(data.reply);
+        // NOTE: speakText(data.reply) is intentionally removed here so audio does not auto-play!
 
       } catch (e) {
         wait.remove();
@@ -415,7 +433,7 @@
         if (!r.ok) throw new Error(data.error);
         
         out.textContent = data.reply;
-        speakText(data.reply);
+        // NOTE: Manual audio only
         out.scrollIntoView({ behavior: "smooth" });
       } catch (err) {
         out.textContent = "Sorry, " + (err.message || "an error occurred.") + " Please try again.";
