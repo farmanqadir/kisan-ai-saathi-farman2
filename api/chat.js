@@ -8,23 +8,25 @@ let raw=(process.env.GEMINI_API_KEY||'').trim();
 let m=raw.match(/AIza[0-9A-Za-z\-_]{30,}/);
 let key=m?m[0]:raw.replace(/["'\s]/g,'');
 if(!key)return res.json({reply:'Key missing'});
-if(req.method==='GET')return res.json({len:key.length});
 let b=req.body;
-if(!b){try{let t=await new Promise(r=>{let d='';req.on('data',c=>d+=c);req.on('end',()=>r(d));});b=t?JSON.parse(t):{};}catch{b={};}
-}
+if(!b){try{let t=await new Promise(r=>{let d='';req.on('data',c=>d+=c);req.on('end',()=>r(d));});b=t?JSON.parse(t):{};}catch{b={};}}
 if(typeof b==='string')try{b=JSON.parse(b);}catch{}
 let msg=b.message||b.prompt||'';
 if(Array.isArray(b.messages)&&b.messages.length>0){let l=b.messages[b.messages.length-1];msg=l.content||l.text||'';}
 msg=(msg||'').trim();
-if(!msg)return res.json({reply:'Khali'});
-let models=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-flash-latest'];
+if(!msg)return res.json({reply:'Sawal khali hai'});
+
+let models=['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-1.5-flash','gemini-flash-latest'];
 for(let model of models){
-let url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-let r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{parts:[{text:msg}]}]})});
-let data=await r.json();
-if(r.ok){return res.json({reply:data.candidates?.[0]?.content?.parts?.[0]?.text||'No reply'});}
-if(!JSON.stringify(data).includes('not found') &&!JSON.stringify(data).includes('no longer')){return res.json({reply:'Google Error: '+(data.error?.message||JSON.stringify(data))});}
+ try{
+  let url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  let r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{parts:[{text:msg}]}]})});
+  let data=await r.json();
+  if(r.ok && data.candidates?.[0]?.content?.parts?.[0]?.text){
+   return res.json({reply:data.candidates[0].content.parts[0].text});
+  }
+ }catch(e){ continue; }
 }
-return res.json({reply:'Sab models fail'});
-}catch(e){return res.json({reply:'Server Error: '+e.message});}
+return res.json({reply:'Abhi fasal mashwara system busy hai, 30 second baad dobara sawal bhejein. Shukria.'});
+}catch(e){return res.json({reply:'Server busy hai, thori der baad try karen.'});}
 }
