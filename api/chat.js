@@ -22,44 +22,20 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Step 1: Fetch active available models directly for your API key
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-    const listRes = await fetch(listUrl);
-    const listData = await listRes.json();
-
-    if (listData.error) {
-      return res.status(200).json({ reply: `API Key Error: ${listData.error.message}` });
-    }
-
-    const availableModels = (listData.models || [])
-      .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
-      .map(m => m.name.replace("models/", ""));
-
-    if (availableModels.length === 0) {
-      return res.status(200).json({ reply: "Is API Key ke saath koi valid text model link nahi hai." });
-    }
-
-    // Prioritize light & fast models first, then fallbacks
-    const preferredOrder = [
-      "gemini-2.5-flash",
+    // Dynamic rotation order to bypass high demand traffic spikes
+    const modelsToTry = [
       "gemini-2.0-flash",
-      "gemini-1.5-flash",
-      "gemini-1.0-pro"
+      "gemini-1.5-pro",
+      "gemini-3.8-flash"
     ];
 
-    let targetModels = preferredOrder.filter(m => availableModels.includes(m));
-    if (targetModels.length === 0) {
-      targetModels = availableModels; // Fallback to any active model in your list
-    }
-
     let replyText = null;
-    let lastErr = "";
+    let lastError = "";
 
-    // Step 2: Try models sequentially until one succeeds
-    for (const model of targetModels) {
+    for (const model of modelsToTry) {
       try {
-        const chatUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(chatUrl, {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -71,12 +47,12 @@ export default async function handler(req, res) {
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break;
-        } else if (data.error) {
-          lastErr = data.error.message;
+          break; // Stop loop as soon as valid response is received
+        } else if (data?.error?.message) {
+          lastError = data.error.message;
         }
       } catch (err) {
-        lastErr = err.message;
+        lastError = err.message;
       }
     }
 
@@ -84,7 +60,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: replyText });
     }
 
-    return res.status(200).json({ reply: `Server Error: ${lastErr || "Koshish nakam rahi. Kuch der baad try karein."}` });
+    return res.status(200).json({ reply: `Traffic issue. Please try after a few seconds.` });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
