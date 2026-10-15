@@ -17,13 +17,31 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY Vercel environment variables mein missing hai." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY environment variable missing." });
     }
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Standard working Google Gemini REST API URL
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // 1. Pehle API key aur models ki availability test karne ke liye list models call karein
+    let activeModel = "gemini-1.5-flash"; // default fallback
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const listData = await listRes.json();
+      
+      if (listData && listData.models) {
+        // Check if gemini-1.5-flash or flash exists in available models
+        const foundFlash = listData.models.find(m => m.name.includes("gemini-1.5-flash") || m.name.includes("gemini-2.5-flash"));
+        if (foundFlash) {
+          // Extract clean model name without 'models/' prefix if needed
+          activeModel = foundFlash.name.replace("models/", "");
+        }
+      }
+    } catch (e) {
+      console.log("Model listing check skipped, using default.");
+    }
+
+    // 2. Ab us verified model par request bhejain
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -37,15 +55,15 @@ export default async function handler(req, res) {
 
     if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
       return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
-    } 
-
-    if (data.error) {
-      return res.status(200).json({ reply: `Google API Response: ${data.error.message || JSON.stringify(data.error)}` });
     }
 
-    return res.status(200).json({ reply: "Response generate nahi ho saka. Baraye meherbani dobara try karein." });
+    if (data.error) {
+      return res.status(200).json({ reply: `API Connection Error (${activeModel}): ${data.error.message}` });
+    }
+
+    return res.status(200).json({ reply: "Server se koi response nahi mila. Dobara koshish karein." });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server error: " + err.message });
+    return res.status(200).json({ reply: "Server exception error: " + err.message });
   }
 }
