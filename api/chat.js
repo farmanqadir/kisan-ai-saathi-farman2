@@ -1,7 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 export default async function handler(req, res) {
-  // Set headers first to ensure any response is handled properly
+  // Ensure headers are strictly JSON
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(200).json({ reply: "Error: Invalid request method." });
+    return res.status(200).json({ reply: "Invalid request method." });
   }
 
   try {
@@ -20,37 +18,44 @@ export default async function handler(req, res) {
     const messages = body?.messages;
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(200).json({ reply: "Error: Messages array missing in request." });
+      return res.status(200).json({ reply: "No messages found in request." });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ 
-        reply: "Configuration Error: Vercel environment variables mein GEMINI_API_KEY set nahi ki gayi hai." 
-      });
+      return res.status(200).json({ reply: "Error: GEMINI_API_KEY is not set in Vercel Environment Variables." });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+    // Get the latest user message
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    const chat = model.startChat({
-      history: messages.slice(0, -1).map(m => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }]
-      }))
+    // Direct Gemini 1.5/2.5 Flash REST API endpoint (No external package crash risk)
+    const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(geminiURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: lastUserMsg }]
+          }
+        ]
+      })
     });
 
-    const result = await chat.sendMessage(lastUserMsg);
-    const responseText = await result.response.text();
+    const data = await response.json();
 
-    return res.status(200).json({ reply: responseText });
+    if (data.error) {
+      return res.status(200).json({ reply: "Gemini API Error: " + (data.error.message || "Unknown error") });
+    }
+
+    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Maazrat, koi jawab mosool nahi ho saka.";
+
+    return res.status(200).json({ reply: replyText });
 
   } catch (err) {
-    console.error("Critical Backend Error:", err.message);
-    return res.status(200).json({ 
-      reply: "Technical Error: " + (err.message || "Something went wrong on server.") 
-    });
+    console.error("Serverless Function Error:", err);
+    return res.status(200).json({ reply: "Server error occurred. Please try again." });
   }
 }
