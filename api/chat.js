@@ -22,17 +22,19 @@ export default async function handler(req, res) {
 
     const lastUserMsg = messages[messages.length - 1]?.content || "Hello";
 
-    // Standard Gemini REST endpoints to try
-    const endpoints = [
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`
+    // Standard ASCII hyphen models list
+    const modelsToTry = [
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash-exp"
     ];
 
-    let lastErrorDetails = "";
+    let replyText = null;
+    let lastError = "";
 
-    for (const url of endpoints) {
+    for (const model of modelsToTry) {
       try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -44,19 +46,21 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+          replyText = data.candidates[0].content.parts[0].text;
+          break; // Stop loop as soon as response is successful
         } else if (data.error) {
-          lastErrorDetails = data.error.message || JSON.stringify(data.error);
+          lastError = data.error.message;
         }
       } catch (err) {
-        lastErrorDetails = err.message;
+        lastError = err.message;
       }
     }
 
-    // Exact Error Feedback if Google API declines request
-    return res.status(200).json({ 
-      reply: `Google API Error: ${lastErrorDetails || "Response fetch nahi ho saka. Baraye meherbani API key permissions ya billing check karein."}` 
-    });
+    if (!replyText) {
+      return res.status(200).json({ reply: `API Notice: ${lastError || "Response fetch nahi ho saka, dobara click karein."}` });
+    }
+
+    return res.status(200).json({ reply: replyText });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
