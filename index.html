@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ur" dir="ltr">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -83,10 +83,10 @@
     <div class="flex items-center gap-3">
       <div id="langBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-emerald-400">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="langBadgeText">Auto-Detecting Language</span>
+        <span id="langBadgeText">Auto-Language Mirroring Active</span>
       </div>
       <div class="flex items-center text-xs bg-slate-900 border border-white/10 rounded-lg p-1">
-        <span class="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-medium shadow">AI Live</span>
+        <span class="px-2.5 py-1 rounded-md bg-emerald-600 text-white font-medium shadow">System Ready</span>
       </div>
     </div>
   </header>
@@ -95,10 +95,10 @@
   <div class="max-w-4xl w-full mx-auto px-4 pt-4">
     <div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/10">
       <button class="tab active flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" data-tab="chat">
-        <i class="fa-solid fa-comments text-xs"></i> <span>Sawal Poochein (Smart AI Chat)</span>
+        <i class="fa-solid fa-comments text-xs"></i> <span>Ask AI Assistant</span>
       </button>
       <button class="tab flex-1 py-2.5 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-2" data-tab="advice">
-        <i class="fa-solid fa-wheat-awn text-xs"></i> <span>Fasal Mashwara (Precision Form)</span>
+        <i class="fa-solid fa-wheat-awn text-xs"></i> <span>Crop Consultation Form</span>
       </button>
     </div>
   </div>
@@ -115,27 +115,27 @@
       <!-- Quick Action Chips -->
       <div id="chips" class="flex flex-wrap gap-2 my-3">
         <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
-          <span>🌾 Is waqt kaun si fasal lagayen?</span>
+          <span>🌾 Best crop to plant this season?</span>
         </button>
         <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
-          <span>⚡ Kam muddat mein tayyar hone wali fasal</span>
+          <span>⚡ Short duration crop options</span>
         </button>
         <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
-          <span>🍂 Gandum mein peela rang aa raha hai</span>
+          <span>🍂 Wheat leaf yellowing treatment</span>
         </button>
         <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all flex items-center gap-2">
-          <span>🐛 Kapas mein sundi ka ilaaj</span>
+          <span>🐛 Pest control for cotton crop</span>
         </button>
       </div>
 
       <!-- Input Dock -->
       <div class="glass-card p-2 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
-        <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all" title="Voice Input (Bol kar sawal poochein)">
+        <button id="micBtn" type="button" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition-all" title="Voice Input (Speak your query)">
           <i class="fa-solid fa-microphone text-sm"></i>
         </button>
-        <input id="q" type="text" placeholder="Apna sawal kisi bhi zaban mein likhein (Ask in Urdu, Roman Urdu, or English)..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-2">
+        <input id="q" type="text" placeholder="Type your query in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-2">
         <button id="send" class="primary bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
-          <span>Bhejein</span>
+          <span>Send</span>
           <i class="fa-solid fa-paper-plane text-xs"></i>
         </button>
       </div>
@@ -145,82 +145,82 @@
     <section id="advice" class="panel hidden">
       <div class="glass-card p-6 rounded-2xl border border-white/10 shadow-2xl">
         <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-emerald-400"></i> Fasal ka Tafseeli Mashwara Hasil Karein
+          <i class="fa-solid fa-sliders text-emerald-400"></i> Get Detailed Crop Consultation
         </h2>
         
         <form id="adviceForm" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Aap ka ilaqa / zila</label>
-              <input name="location" placeholder="masalan: Multan, Punjab" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Region / District</label>
+              <input name="location" placeholder="e.g. Multan, Punjab" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Abhi kaun sa mahina / season hai</label>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Current Month / Season</label>
               <select name="season" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Maujooda mahina (khud andaza lagayen)</option>
-                <option>Rabi (sardi ki fasal, Oct–Dec bijai)</option>
-                <option>Kharif (garmi ki fasal, Apr–Jul bijai)</option>
-                <option>Zaid (chhoti fasal, Feb–Apr)</option>
+                <option>Current Season (Auto-detect)</option>
+                <option>Rabi (Winter season, Oct–Dec sowing)</option>
+                <option>Kharif (Summer season, Apr–Jul sowing)</option>
+                <option>Zaid (Short season, Feb–Apr)</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Zameen ki qism</label>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Soil Type</label>
               <select name="soil" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Maloom nahi</option>
-                <option>Chikni (clay)</option>
-                <option>Maira (loam)</option>
-                <option>Retli (sandy)</option>
-                <option>Khari / shor wali (saline)</option>
+                <option>Not Sure</option>
+                <option>Clay</option>
+                <option>Loam (Maira)</option>
+                <option>Sandy (Retli)</option>
+                <option>Saline (Khari / Shor)</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Paani ka zariya</label>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Water Source</label>
               <select name="water" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Nahar</option>
+                <option>Canal (Nahar)</option>
                 <option>Tubewell</option>
-                <option>Nahar aur tubewell dono</option>
-                <option>Sirf barish (barani)</option>
+                <option>Both Canal & Tubewell</option>
+                <option>Rainfed (Barani)</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Zameen ka rakba</label>
-              <input name="area" placeholder="masalan: 5 acre" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Land Area</label>
+              <input name="area" placeholder="e.g. 5 acres" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Fasal kitne arsay mein chahiye</label>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Desired Duration</label>
               <select name="duration" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                <option>Koi pabandi nahi</option>
-                <option>Sab se kam muddat (60–90 din)</option>
-                <option>3 se 4 mahine</option>
-                <option>6 mahine ya zyada</option>
+                <option>No Preference</option>
+                <option>Shortest Duration (60–90 days)</option>
+                <option>3 to 4 months</option>
+                <option>6 months or more</option>
               </select>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Lagat ki hadd (Rs per acre)</label>
-              <input name="budget" placeholder="masalan: 50,000" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Budget Limit (PKR per acre)</label>
+              <input name="budget" placeholder="e.g. 50,000" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Pichli fasal kaun si thi</label>
-              <input name="lastCrop" placeholder="masalan: gandum" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Previous Crop</label>
+              <input name="lastCrop" placeholder="e.g. Wheat" class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Koi khaas sawal ya masla</label>
-            <textarea name="notes" rows="3" placeholder="Jo bhi batana chahein..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Specific Question or Problem</label>
+            <textarea name="notes" rows="3" placeholder="Describe any details or concerns..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
           </div>
 
           <button class="primary w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30" type="submit" id="adviceBtn">
-            Mashwara Hasil Karein
+            Get Consultation
           </button>
         </form>
 
@@ -330,7 +330,7 @@
       `;
 
       const audioBtnHTML = !isUser ? `
-        <button onclick="speakText(this.nextElementSibling.innerText)" class="text-slate-500 hover:text-emerald-400 text-xs ml-2 float-right pt-1" title="Suno (Listen Audio)">
+        <button onclick="speakText(this.nextElementSibling.innerText)" class="text-slate-500 hover:text-emerald-400 text-xs ml-2 float-right pt-1" title="Listen Audio">
           <i class="fa-solid fa-volume-high"></i>
         </button>
       ` : '';
@@ -365,7 +365,7 @@
       history.push({ role: "user", content: `${systemInstruction}\n\nUser Question: ${text}` });
 
       sendBtn.disabled = true;
-      const wait = addBubble("Soch raha hoon...", "bot typing");
+      const wait = addBubble("Processing...", "bot typing");
 
       try {
         const r = await fetch("/api/chat", {
@@ -384,7 +384,7 @@
       } catch (e) {
         wait.remove();
         history.pop();
-        addBubble("Maazrat, " + (e.message || "kuch masla aa gaya") + " Internet check kar ke dobara koshish karein.", "bot");
+        addBubble("Sorry, " + (e.message || "an error occurred.") + " Please check your connection and try again.", "bot");
       }
       sendBtn.disabled = false;
       input.focus();
@@ -400,9 +400,9 @@
       const btn = document.getElementById("adviceBtn");
       const out = document.getElementById("result");
       btn.disabled = true;
-      btn.textContent = "Mashwara tayyar ho raha hai...";
+      btn.textContent = "Generating consultation...";
       out.classList.remove("hidden");
-      out.textContent = "Thori der intezar karein...";
+      out.textContent = "Please wait a moment...";
 
       try {
         const payload = Object.fromEntries(new FormData(e.target).entries());
@@ -418,10 +418,10 @@
         speakText(data.reply);
         out.scrollIntoView({ behavior: "smooth" });
       } catch (err) {
-        out.textContent = "Maazrat, " + (err.message || "kuch masla aa gaya") + " Dobara koshish karein.";
+        out.textContent = "Sorry, " + (err.message || "an error occurred.") + " Please try again.";
       }
       btn.disabled = false;
-      btn.textContent = "Mashwara Hasil Karein";
+      btn.textContent = "Get Consultation";
     });
   </script>
 </body>
