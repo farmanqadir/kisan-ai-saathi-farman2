@@ -9,72 +9,35 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const messages = body?.messages;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(200).json({ reply: "Request format error." });
-    }
+    const messages = body?.messages || [];
+    const userMsg = messages[messages.length - 1]?.content || "Hello";
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
+      return res.status(200).json({ reply: "Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    const rawMsg = messages[messages.length - 1]?.content || "Hello";
-    const cleanUserMsg = typeof rawMsg === 'string' ? rawMsg.replace(/\[SYSTEM INSTRUCTION:.*?\]/g, '').trim() : "Hello";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: `You are Farman Kisan Hub AI Assistant. Answer concisely in 2-4 sentences without markdown stars. Query: ${userMsg}` }]
+        }]
+      })
+    });
 
-    const modelsToTry = [
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
-
-    const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
-STRICT RULES:
-1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences).
-2. NEVER use markdown characters like stars, double stars, or hashtags. Use clean plain text only.
-3. No unnecessary intros or disclaimers.
-4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
-
-    let replyText = null;
-
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: `${strictSystemPrompt}\n\nUser Question: ${cleanUserMsg}` }]
-              }
-            ]
-          })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
-          break;
-        }
-      } catch (err) {
-        continue;
-      }
+    const data = await response.json();
+    
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      let text = data.candidates[0].content.parts[0].text;
+      text = text.replace(/[*#_]/g, '').trim();
+      return res.status(200).json({ reply: text });
+    } else {
+      return res.status(200).json({ reply: "API Error: " + (data.error?.message || "Invalid key or quota limit.") });
     }
-
-    if (replyText) {
-      const cleanReply = replyText
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/#/g, '')
-        .trim();
-
-      return res.status(200).json({ reply: cleanReply });
-    }
-
-    return res.status(200).json({ reply: "Server busy, please try again." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
