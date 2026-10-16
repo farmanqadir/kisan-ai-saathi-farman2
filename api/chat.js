@@ -28,76 +28,30 @@ STRICT RULES:
 3. Remember previous conversation context and answer accordingly.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
-    // Map conversation history properly like ChatGPT style memory
+    // Map conversation history for ChatGPT-style memory
     let formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    // Inject system instructions neatly into the very first user prompt
     if (formattedContents.length > 0 && formattedContents[0].parts && formattedContents[0].parts[0]) {
       formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // Dynamic Discovery of Active Google Models
-    let availableModels = [];
-    try {
-      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-      const listRes = await fetch(listUrl);
-      const listData = await listRes.json();
+    // Direct stable model endpoint to eliminate lookup errors and traffic delays
+    const model = "gemini-1.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      if (listData?.models && Array.isArray(listData.models)) {
-        availableModels = listData.models
-          .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
-          .map(m => m.name.replace("models/", ""));
-      }
-    } catch (e) {
-      console.error("List models fetch error:", e);
-    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: formattedContents })
+    });
 
-    // Priority models list (including your preferred flash models)
-    const priorityOrder = [
-      "gemini-3.8-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-2.0-flash",
-      "gemini-2.5-flash",
-      "gemini-1.5-flash"
-    ];
+    const data = await response.json();
 
-    let modelsToTry = priorityOrder.filter(m => availableModels.includes(m));
-    if (modelsToTry.length === 0) {
-      modelsToTry = availableModels.length > 0 ? availableModels : priorityOrder;
-    }
-
-    let replyText = null;
-    let lastError = "";
-
-    // Loop through available working models with full history fallback
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: formattedContents })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
-          break;
-        } else if (data?.error?.message) {
-          lastError = data.error.message;
-        }
-      } catch (err) {
-        lastError = err.message;
-      }
-    }
-
-    if (replyText) {
-      // Clean any markdown stars or formatting symbols automatically
+    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const replyText = data.candidates[0].content.parts[0].text;
       const cleanReply = replyText
         .replace(/\*\*/g, '')
         .replace(/\*/g, '')
@@ -105,9 +59,10 @@ STRICT RULES:
         .trim();
 
       return res.status(200).json({ reply: cleanReply });
+    } else {
+      const errMessage = data?.error?.message || "Server busy";
+      return res.status(200).json({ reply: "API Error: " + errMessage });
     }
-
-    return res.status(200).json({ reply: "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server exception error: " + err.message });
