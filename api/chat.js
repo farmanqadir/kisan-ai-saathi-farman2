@@ -24,8 +24,8 @@ module.exports = async function handler(req, res) {
     const systemInstruction = {
       parts: [{
         text: isCall 
-          ? "You are Farman Kisan Hub Voice Assistant. Answer in MAXIMUM 1 SHORT SENTENCE. Reply EXACTLY in the language spoken by user (Urdu, English, or Roman Urdu). No markdown, no filler words."
-          : "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give concise, direct answers (max 2-4 sentences). Do NOT use markdown symbols. Answer strictly in the language of query."
+          ? "You are Farman Kisan Hub Voice Assistant. Provide a complete, natural 1-2 sentence response. Reply strictly in the language used by the user (Urdu, Roman Urdu, or English). Clean plain text only."
+          : "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give complete, direct, concise answers (2 to 4 full sentences). Do NOT use markdown asterisks or hashtags. Answer strictly in the language of query."
       }]
     };
 
@@ -34,10 +34,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    // For live call, use ultra-fast model priority
-    const modelsToTry = isCall 
-      ? ["gemini-3.5-flash-lite", "gemini-3.8-flash"]
-      : ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+    const modelsToTry = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 
     let replyText = null;
 
@@ -52,8 +49,8 @@ module.exports = async function handler(req, res) {
             systemInstruction: systemInstruction,
             contents: formattedContents,
             generationConfig: {
-              maxOutputTokens: isCall ? 60 : 300, // Reduced tokens for instant call speed
-              temperature: 0.3
+              maxOutputTokens: 1000,
+              temperature: 0.4
             }
           })
         });
@@ -74,9 +71,9 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Aap ki baat samajh nahi aayi." });
+    return res.status(200).json({ reply: "Maazrat, dobara koshish karein." });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Error: " + err.message });
+    return res.status(200).json({ reply: "Server error: " + err.message });
   }
 };
