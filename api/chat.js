@@ -20,15 +20,13 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // STRICT RULES FOR CONCISE, STAR-FREE, EXACT ANSWERS
     const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
 STRICT RULES:
 1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences).
-2. NEVER use markdown characters like stars (*), double stars (**), bullet stars (*), or hashtags (#). Use clean plain text only.
+2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
 3. Remember previous conversation context and answer accordingly.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
-    // Map conversation history for ChatGPT-style memory
     let formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
@@ -38,9 +36,9 @@ STRICT RULES:
       formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // Direct stable model endpoint to eliminate lookup errors and traffic delays
+    // UPDATED TO 'v1' ENDPOINT INSTEAD OF 'v1beta'
     const model = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
