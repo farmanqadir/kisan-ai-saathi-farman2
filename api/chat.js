@@ -17,10 +17,10 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Error: GEMINI_API_KEY missing in Vercel." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Format full chat history for ChatGPT-style memory context
+    // Format chat history for full ChatGPT-style memory context
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
@@ -34,16 +34,18 @@ STRICT RULES:
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
     if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser: ${formattedContents[0].parts[0].text}`;
+      formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // List of reliable Gemini models with automatic fallback
+    // Active models list to try sequentially
     const modelsToTry = [
       "gemini-2.0-flash",
+      "gemini-2.5-flash",
       "gemini-1.5-flash"
     ];
 
     let replyText = null;
+    let lastError = null;
 
     for (const model of modelsToTry) {
       try {
@@ -55,11 +57,15 @@ STRICT RULES:
         });
 
         const data = await response.json();
+
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
           break;
+        } else if (data?.error?.message) {
+          lastError = data.error.message;
         }
       } catch (err) {
+        lastError = err.message;
         continue;
       }
     }
@@ -69,7 +75,10 @@ STRICT RULES:
       return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
+    // Return the actual error if all models fail
+    return res.status(200).json({ 
+      reply: lastError ? `API Issue: ${lastError}` : "Server busy, please try again." 
+    });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
