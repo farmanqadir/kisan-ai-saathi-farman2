@@ -26,21 +26,16 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = `You are Farman Kisan Hub AI Assistant. 
-STRICT RULES:
-1. Provide concise, direct, and exact answers (2-4 sentences).
-2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
-3. Remember previous conversation context and answer accordingly.
-4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
+    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer concisely in Roman Urdu, Urdu, or English without markdown stars (*). Remember conversation context.";
 
     if (formattedContents.length > 0) {
       formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // Backup models list if 3.8 is busy/overloaded
+    // Standard models with pure ASCII hyphens
     const modelsToTry = [
-      "gemini-3.8-flash",
-      "gemini-1.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
       "gemini-1.5-flash"
     ];
 
@@ -60,7 +55,7 @@ STRICT RULES:
 
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
-          break; // Stop loop as soon as a working response is received
+          break;
         } else if (data?.error?.message) {
           lastError = data.error.message;
         }
