@@ -72,14 +72,13 @@
     </div>
     <div class="flex-1 overflow-y-auto p-3 space-y-2" id="chatHistoryList">
       <div class="text-[11px] text-slate-500 uppercase tracking-wider px-2 py-1">Recent Chats</div>
-      <!-- History items will populate here -->
     </div>
     <div class="p-3 border-t border-white/10 text-xs text-slate-500 text-center">
       Farman Kisan Hub v2.0
     </div>
   </aside>
 
-  <!-- Main Wrapper to adjust for sidebar -->
+  <!-- Main Content Wrapper -->
   <div class="flex-1 flex flex-col md:pl-72 justify-between min-h-screen">
 
     <!-- Header -->
@@ -121,7 +120,7 @@
         </div>
       </div>
 
-      <!-- Header Action Buttons (Live Call & Auth) -->
+      <!-- Action Buttons -->
       <div class="flex items-center gap-2">
         <button id="liveCallBtn" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all">
           <i class="fa-solid fa-phone-volume text-[11px] animate-bounce"></i> <span>Live Call</span>
@@ -134,24 +133,20 @@
       </div>
     </header>
 
-    <!-- Live Voice Call Modal -->
-    <div id="callModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 hidden">
-      <div class="glass-card max-w-sm w-full p-6 rounded-3xl text-center relative border border-emerald-500/30 shadow-2xl flex flex-col items-center">
+    <!-- Ultra-Fast Hands-Free Live Voice Call Modal -->
+    <div id="callModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+      <div class="glass-card max-w-sm w-full p-8 rounded-3xl text-center relative border border-emerald-500/30 shadow-2xl flex flex-col items-center">
         <button id="closeCall" class="absolute top-4 right-4 text-slate-400 hover:text-white">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
         
-        <div class="w-24 h-24 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center my-6 relative animate-pulse">
-          <i class="fa-solid fa-microphone text-3xl text-emerald-400"></i>
+        <div id="callOrb" class="w-28 h-28 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center my-6 relative animate-pulse">
+          <i class="fa-solid fa-waveform text-4xl text-emerald-400"></i>
           <div class="absolute inset-0 rounded-full border border-emerald-400 animate-ping opacity-25"></div>
         </div>
 
-        <h3 class="text-lg font-bold text-white mb-1">Live AI Voice Call</h3>
-        <p id="callStatus" class="text-xs text-emerald-400 mb-6">Listening... (Speak now in Urdu or English)</p>
-
-        <div id="callTranscript" class="w-full bg-slate-950/60 p-3 rounded-xl text-xs text-slate-300 min-h-[60px] max-h-[100px] overflow-y-auto mb-6 border border-white/5 text-left">
-          Aapki awaz ka intezaar hai...
-        </div>
+        <h3 class="text-lg font-bold text-white mb-1">Kisan Hub AI Call</h3>
+        <p id="callStatus" class="text-xs text-emerald-400 mb-8 font-medium">Listening... Bolna shuru karein.</p>
 
         <button id="endCallBtn" class="bg-red-600 hover:bg-red-500 text-white font-semibold py-3 px-8 rounded-full text-sm transition-all shadow-lg shadow-red-600/30 flex items-center gap-2">
           <i class="fa-solid fa-phone-slash"></i> End Call
@@ -167,7 +162,7 @@
         </button>
 
         <h2 id="authTitle" class="text-xl font-bold text-white mb-2">Welcome Back</h2>
-        <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account to auto-save chat history</p>
+        <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account</p>
 
         <form id="authForm" class="space-y-4">
           <div>
@@ -203,12 +198,12 @@
       </div>
     </div>
 
-    <!-- Main Content Area -->
+    <!-- Main Section -->
     <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between w-full">
       <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
         <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[50vh] max-h-[58vh] py-2"></div>
 
-        <!-- Quick Chips / Prompts -->
+        <!-- Suggestion Chips -->
         <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
           <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3 py-2 rounded-xl transition-all cursor-pointer">
             <span>Best crop to plant this season?</span>
@@ -221,7 +216,7 @@
           </button>
         </div>
 
-        <!-- Input Bar with Voice & Send -->
+        <!-- Input Bar -->
         <div class="glass-card p-2 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
           <button id="micBtn" title="Speak to AI" class="text-slate-400 hover:text-emerald-400 p-2.5 rounded-xl transition-all">
             <i class="fa-solid fa-microphone text-sm"></i>
@@ -251,10 +246,10 @@
     </footer>
   </div>
 
-  <!-- Firebase & App Scripts -->
+  <!-- Firebase Auth Persistence Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -270,6 +265,9 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Lock session persistence in browser local storage permanently
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
 
     let currentUser = null;
     let isSignUp = false;
@@ -344,13 +342,11 @@
         const q = query(collection(db, "chats"), where("userId", "==", uid));
         const querySnapshot = await getDocs(q);
         
-        let count = 1;
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           addBubble(data.userMsg, "me");
           addBubble(data.botReply, "bot");
 
-          // Add to sidebar history
           const item = document.createElement("button");
           item.className = "w-full text-left text-xs text-slate-300 hover:bg-white/5 p-2 rounded-xl truncate transition-all flex items-center gap-2";
           item.innerHTML = `<i class="fa-solid fa-message text-[10px] text-emerald-400"></i> <span class="truncate">${data.userMsg}</span>`;
@@ -359,7 +355,6 @@
             addBubble(data.botReply, "bot");
           });
           historyList.appendChild(item);
-          count++;
         });
       } catch (e) { console.error("History error:", e); }
     }
@@ -368,7 +363,7 @@
   </script>
 
   <script>
-    // Tab Switching
+    // Tab controls
     document.querySelectorAll(".tab").forEach((t) => {
       t.addEventListener("click", () => {
         document.querySelectorAll(".tab").forEach((btn) => btn.classList.remove("bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white"));
@@ -394,7 +389,6 @@
       sidebarOverlay.classList.add("hidden");
     });
 
-    // New Chat button clears messages and history array
     document.getElementById("newChatBtn").addEventListener("click", () => {
       document.getElementById("messages").innerHTML = "";
       conversationHistory = [];
@@ -437,7 +431,8 @@
       conversationHistory.push({ role: "user", content: queryText });
 
       addBubble(queryText, "me");
-      const wait = addBubble("Thinking / Soch raha hai...", "bot typing");
+      // Updated clean loading text as requested
+      const wait = addBubble("Thinking...", "bot typing");
 
       sendBtn.disabled = true;
       sendBtn.classList.add("opacity-50");
@@ -479,12 +474,12 @@
       });
     });
 
-    // Voice Input (Speech-to-Text) using browser SpeechRecognition
+    // Voice Input Speech-to-text
     const micBtn = document.getElementById("micBtn");
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
-      recognition.lang = 'ur-PK'; // Urdu / English support
+      recognition.lang = 'ur-PK';
       recognition.continuous = false;
 
       micBtn.addEventListener("click", () => {
@@ -499,50 +494,62 @@
         send(speechToText);
       };
 
-      recognition.onerror = () => {
-        micBtn.classList.remove("text-emerald-400", "animate-pulse");
-      };
+      recognition.onerror = () => micBtn.classList.remove("text-emerald-400", "animate-pulse");
     } else {
-      micBtn.style.display = 'none'; // Hide if browser doesn't support
+      micBtn.style.display = 'none';
     }
 
-    // Live Voice Call Modal Logic
+    // Ultra-Fast Real-time Voice Call Engine (Text-less Voice Mode)
     const callModal = document.getElementById("callModal");
     const liveCallBtn = document.getElementById("liveCallBtn");
     const closeCall = document.getElementById("closeCall");
     const endCallBtn = document.getElementById("endCallBtn");
-    const callTranscript = document.getElementById("callTranscript");
     const callStatus = document.getElementById("callStatus");
+    const callOrb = document.getElementById("callOrb");
 
     let callRecognition = null;
+    let isCallActive = false;
 
     liveCallBtn.addEventListener("click", () => {
       callModal.classList.remove("hidden");
-      startLiveCallSession();
+      isCallActive = true;
+      startRealtimeCallSession();
     });
 
-    closeCall.addEventListener("click", () => {
+    function stopCall() {
+      isCallActive = false;
       callModal.classList.add("hidden");
-      if(callRecognition) callRecognition.stop();
-    });
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (callRecognition) callRecognition.stop();
+    }
 
-    endCallBtn.addEventListener("click", () => {
-      callModal.classList.add("hidden");
-      if(callRecognition) callRecognition.stop();
-    });
+    closeCall.addEventListener("click", stopCall);
+    endCallBtn.addEventListener("click", stopCall);
 
-    function speakText(text) {
+    function speakAudioDirectly(text, onComplete) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ur-PK'; // AI speaking in Urdu/English accent
+        utterance.lang = 'ur-PK';
+        utterance.rate = 1.05; // Fast response speed
+
+        utterance.onstart = () => {
+          callStatus.textContent = "AI is speaking...";
+          callOrb.classList.add("scale-110", "border-amber-400");
+        };
+
+        utterance.onend = () => {
+          callOrb.classList.remove("scale-110", "border-amber-400");
+          if (onComplete && isCallActive) onComplete();
+        };
+
         window.speechSynthesis.speak(utterance);
       }
     }
 
-    function startLiveCallSession() {
+    function startRealtimeCallSession() {
       if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-        callTranscript.textContent = "Voice call feature is not supported in this browser.";
+        callStatus.textContent = "Voice Call not supported in this browser.";
         return;
       }
 
@@ -556,9 +563,9 @@
       callRecognition.start();
 
       callRecognition.onresult = async (event) => {
+        if (!isCallActive) return;
         const userSpoken = event.results[0][0].transcript;
-        callTranscript.innerHTML = `<b class=\"text-amber-400\">Aap:</b> ${userSpoken}`;
-        callStatus.textContent = "AI soch raha hai...";
+        callStatus.textContent = "Thinking...";
 
         try {
           const r = await fetch("/api/chat", {
@@ -567,27 +574,25 @@
             body: JSON.stringify({ messages: [{ role: "user", content: userSpoken }] }),
           });
           const data = await r.json();
-          const botReply = data.reply || "Maazrat, samajh nahi aaya.";
-          
-          callTranscript.innerHTML += `<br><b class=\"text-emerald-400\">AI:</b> ${botReply}`;
-          callStatus.textContent = "AI bol raha hai...";
-          speakText(botReply);
+          const botReply = data.reply || "Aap ki baat samajh nahi aayi.";
 
-          // Restart listening after speaking
-          setTimeout(() => {
-            if(!callModal.classList.contains("hidden")) {
-              callStatus.textContent = "Listening again...";
-              callRecognition.start();
+          // Speak directly without printing text on screen (ChatGPT Voice Mode style)
+          speakAudioDirectly(botReply, () => {
+            if (isCallActive) {
+              callStatus.textContent = "Listening...";
+              try { callRecognition.start(); } catch(e){}
             }
-          }, 4000);
+          });
+
         } catch(e) {
-          callStatus.textContent = "Connection error in call.";
+          callStatus.textContent = "Connection error.";
+          setTimeout(() => { if(isCallActive) callRecognition.start(); }, 2000);
         }
       };
 
       callRecognition.onerror = () => {
-        if(!callModal.classList.contains("hidden")) {
-          setTimeout(() => { callRecognition.start(); }, 1000);
+        if (isCallActive) {
+          setTimeout(() => { try { callRecognition.start(); } catch(e){} }, 1000);
         }
       };
     }
