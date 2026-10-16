@@ -1,6 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -22,39 +20,44 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Official Google GenAI SDK Client
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Chat History formatting for full memory
-    const contents = messages.map(msg => ({
+    // ChatGPT-style full conversation memory mapping
+    const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const systemInstruction = `You are Farman Kisan Hub AI Assistant. 
+    const systemPrompt = `You are Farman Kisan Hub AI Assistant. 
 STRICT RULES:
 1. Provide concise, direct, and exact answers (2-4 sentences).
 2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
 3. Remember previous conversation context and answer accordingly.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
-    // Official SDK API Call
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-      }
+    if (formattedContents.length > 0) {
+      formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
+    }
+
+    // Direct official Google Gemini endpoint call
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: formattedContents })
     });
 
-    if (response && response.text) {
-      let cleanReply = response.text.replace(/[*#_]/g, '').trim();
+    const data = await response.json();
+
+    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      let cleanReply = data.candidates[0].content.parts[0].text.replace(/[*#_]/g, '').trim();
       return res.status(200).json({ reply: cleanReply });
     } else {
-      return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
+      return res.status(200).json({ 
+        reply: data?.error?.message ? `API Error: ${data.error.message}` : "Server busy, please try again." 
+      });
     }
 
   } catch (err) {
-    return res.status(200).json({ reply: "API Error: " + err.message });
+    return res.status(200).json({ reply: "Server Connection Error: " + err.message });
   }
-}
+};
