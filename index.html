@@ -152,15 +152,16 @@
     <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
       <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[52vh] max-h-[60vh] py-2"></div>
 
+      <!-- Quick Chips / Prompts -->
       <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>🌾 Best crop to plant this season?</span>
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
+          <span>Best crop to plant this season?</span>
         </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>⚡ Short duration crop options</span>
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
+          <span>Short duration crop options</span>
         </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>🍂 Wheat leaf yellowing treatment</span>
+        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
+          <span>Wheat leaf yellowing treatment</span>
         </button>
       </div>
 
@@ -193,7 +194,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCu0rYEobmgK0cCmZLroIWguiPqyPhOAeI",
@@ -222,7 +223,16 @@
     const toggleAuthText = document.getElementById("toggleAuthText");
     const userSection = document.getElementById("userSection");
 
-    authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
+    // Event delegation or safe binding for dynamic buttons
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("#authBtn")) {
+        authModal.classList.remove("hidden");
+      }
+    });
+    
+    if (authBtn) {
+      authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
+    }
     closeAuth.addEventListener("click", () => authModal.classList.add("hidden"));
 
     toggleAuthBtn.addEventListener("click", () => {
@@ -260,8 +270,7 @@
         document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
         loadUserHistory(user.uid);
       } else {
-        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login / Signup</button>`;
-        document.getElementById("authBtn").addEventListener("click", () => authModal.classList.remove("hidden"));
+        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login / Signup</button>`;
       }
     });
 
@@ -312,55 +321,85 @@
     const input = document.getElementById("q");
     const sendBtn = document.getElementById("send");
 
+    // Global chat history array for ChatGPT-style multi-turn memory
+    let conversationHistory = [];
+
     function addBubble(text, cls) {
       const isUser = cls.includes("me");
       const d = document.createElement("div");
       d.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
+      
+      // Auto detect Urdu text for correct styling alignment
+      const isUrdu = /[\u0600-\u06FF]/.test(text);
+
       d.innerHTML = `
         <div class="w-8 h-8 rounded-xl ${isUser ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'} flex items-center justify-center shrink-0 text-xs">
           <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'}"></i>
         </div>
-        <div class="glass-card p-3 rounded-2xl max-w-[85%] text-sm text-slate-200">
+        <div class="glass-card p-3.5 rounded-2xl max-w-[85%] text-sm text-slate-200 ${isUrdu ? 'font-urdu text-right' : ''}" ${isUrdu ? 'dir="rtl"' : ''}>
           ${text}
         </div>
       `;
       box.appendChild(d);
-      box.scrollTop = box.scrollHeight;
+      box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
       return d;
     }
 
     async function send(text) {
-      text = (text || input.value).trim();
-      if (!text) return;
+      const queryText = (text || input.value).trim();
+      if (!queryText) return;
+      
       input.value = "";
       
-      addBubble(text, "me");
-      const wait = addBubble("Processing...", "bot typing");
+      // Push to memory array
+      conversationHistory.push({ role: "user", content: queryText });
+
+      addBubble(queryText, "me");
+      const wait = addBubble("Soch raha hai...", "bot typing");
+
+      // Disable send button temporarily
+      sendBtn.disabled = true;
+      sendBtn.classList.add("opacity-50");
 
       try {
         const r = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
+          body: JSON.stringify({ messages: conversationHistory }),
         });
+        
         const data = await r.json();
         wait.remove();
 
         const reply = data.reply || "No response received.";
+        
+        // Push bot response to memory array
+        conversationHistory.push({ role: "assistant", content: reply });
+
         addBubble(reply, "bot");
 
         if (window.saveChatToCloud) {
-          window.saveChatToCloud(text, reply);
+          window.saveChatToCloud(queryText, reply);
         }
       } catch (e) {
         wait.remove();
-        addBubble("Error connecting to server.", "bot");
+        addBubble("Server connection error. Please try again.", "bot");
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.classList.remove("opacity-50");
       }
     }
 
     sendBtn.addEventListener("click", () => send());
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
-    document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
+    
+    // Quick chips click handler fix
+    document.querySelectorAll(".chip").forEach((c) => {
+      c.addEventListener("click", () => {
+        const chipText = c.querySelector("span") ? c.querySelector("span").textContent : c.textContent;
+        send(chipText);
+      });
+    });
   </script>
 </body>
 </html>
