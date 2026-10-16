@@ -57,140 +57,201 @@
 </head>
 <body class="text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
 
-  <!-- Header -->
-  <header class="glass-nav sticky top-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="relative w-10 h-10 flex items-center justify-center">
-        <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" stroke="url(#logoGlow)" stroke-width="3" class="animate-pulse" />
-          <path d="M50 20 L62 42 L85 38 L70 58 L82 80 L50 68 L18 80 L30 58 L15 38 L38 42 Z" fill="url(#crownGrad)" />
-          <path d="M50 35 C55 45, 65 50, 65 65 C65 73, 58 80, 50 80 C42 80, 35 73, 35 65 C35 50, 45 45, 50 35 Z" fill="url(#leafGrad)" />
-          <defs>
-            <linearGradient id="logoGlow" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#10b981" />
-              <stop offset="100%" stop-color="#f59e0b" />
-            </linearGradient>
-            <linearGradient id="crownGrad" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#fbbf24" />
-              <stop offset="100%" stop-color="#d97706" />
-            </linearGradient>
-            <linearGradient id="leafGrad" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#34d399" />
-              <stop offset="100%" stop-color="#059669" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+  <!-- Sidebar Overlay for Mobile -->
+  <div id="sidebarOverlay" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm hidden md:hidden"></div>
 
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
-          <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            FAST AI
-          </span>
-        </div>
-        <p class="text-[11px] text-slate-400">Multilingual Agriculture Intelligence</p>
-      </div>
-    </div>
-
-    <!-- User Auth Status / Action -->
-    <div class="flex items-center gap-3">
-      <div id="userSection" class="flex items-center gap-2">
-        <button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold transition-all">
-          Login / Signup
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Auth Modal -->
-  <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="glass-card max-w-md w-full p-6 rounded-2xl relative border border-white/10 shadow-2xl">
-      <button id="closeAuth" class="absolute top-4 right-4 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
+  <!-- Sidebar (ChatGPT Style) -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 glass-nav transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col border-r border-white/10">
+    <div class="p-4 flex items-center justify-between border-b border-white/10">
+      <button id="newChatBtn" class="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+        <i class="fa-solid fa-plus"></i> New Chat
       </button>
+      <button id="closeSidebar" class="md:hidden ml-2 text-slate-400 hover:text-white p-2">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-3 space-y-2" id="chatHistoryList">
+      <div class="text-[11px] text-slate-500 uppercase tracking-wider px-2 py-1">Recent Chats</div>
+      <!-- History items will populate here -->
+    </div>
+    <div class="p-3 border-t border-white/10 text-xs text-slate-500 text-center">
+      Farman Kisan Hub v2.0
+    </div>
+  </aside>
 
-      <h2 id="authTitle" class="text-xl font-bold text-white mb-2">Welcome Back</h2>
-      <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account to auto-save chat history</p>
+  <!-- Main Wrapper to adjust for sidebar -->
+  <div class="flex-1 flex flex-col md:pl-72 justify-between min-h-screen">
 
-      <form id="authForm" class="space-y-4">
+    <!-- Header -->
+    <header class="glass-nav sticky top-0 z-30 px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white text-lg p-1">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="relative w-9 h-9 flex items-center justify-center">
+          <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" stroke="url(#logoGlow)" stroke-width="3" class="animate-pulse" />
+            <path d="M50 20 L62 42 L85 38 L70 58 L82 80 L50 68 L18 80 L30 58 L15 38 L38 42 Z" fill="url(#crownGrad)" />
+            <path d="M50 35 C55 45, 65 50, 65 65 C65 73, 58 80, 50 80 C42 80, 35 73, 35 65 C35 50, 45 45, 50 35 Z" fill="url(#leafGrad)" />
+            <defs>
+              <linearGradient id="logoGlow" x1="0" y1="0" x2="100" y2="100">
+                <stop offset="0%" stop-color="#10b981" />
+                <stop offset="100%" stop-color="#f59e0b" />
+              </linearGradient>
+              <linearGradient id="crownGrad" x1="0" y1="0" x2="100" y2="100">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="100%" stop-color="#d97706" />
+              </linearGradient>
+              <linearGradient id="leafGrad" x1="0" y1="0" x2="100" y2="100">
+                <stop offset="0%" stop-color="#34d399" />
+                <stop offset="100%" stop-color="#059669" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
-          <input id="authEmail" type="email" placeholder="kisan@farm.com" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-sm sm:text-base tracking-wide text-white">FARMAN KISAN HUB</h1>
+            <span class="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              FAST AI
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-400">Multilingual Agriculture Intelligence</p>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
-          <input id="authPassword" type="password" placeholder="••••••••" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-        </div>
-
-        <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-lg shadow-emerald-600/30">
-          Login
-        </button>
-      </form>
-
-      <p class="text-center text-xs text-slate-400 mt-4">
-        <span id="toggleAuthText">Don't have an account?</span>
-        <button id="toggleAuthBtn" class="text-emerald-400 font-semibold underline ml-1">Sign Up</button>
-      </p>
-    </div>
-  </div>
-
-  <!-- Navigation Tabs -->
-  <div class="max-w-3xl w-full mx-auto px-4 pt-4">
-    <div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/10">
-      <button class="tab active flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" data-tab="chat">
-        <i class="fa-solid fa-comments text-xs"></i> <span>Ask AI Assistant</span>
-      </button>
-      <button class="tab flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-2" data-tab="advice">
-        <i class="fa-solid fa-wheat-awn text-xs"></i> <span>Crop Consultation Form</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
-    <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
-      <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[52vh] max-h-[60vh] py-2"></div>
-
-      <!-- Quick Chips / Prompts -->
-      <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
-          <span>Best crop to plant this season?</span>
-        </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
-          <span>Short duration crop options</span>
-        </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer">
-          <span>Wheat leaf yellowing treatment</span>
-        </button>
       </div>
 
-      <div class="glass-card p-2.5 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
-        <input id="q" type="text" placeholder="Ask anything in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-3">
-        <button id="send" class="primary bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">
-          Send <i class="fa-solid fa-paper-plane text-xs ml-1"></i>
+      <!-- Header Action Buttons (Live Call & Auth) -->
+      <div class="flex items-center gap-2">
+        <button id="liveCallBtn" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all">
+          <i class="fa-solid fa-phone-volume text-[11px] animate-bounce"></i> <span>Live Call</span>
+        </button>
+        <div id="userSection" class="flex items-center gap-2">
+          <button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">
+            Login
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Live Voice Call Modal -->
+    <div id="callModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+      <div class="glass-card max-w-sm w-full p-6 rounded-3xl text-center relative border border-emerald-500/30 shadow-2xl flex flex-col items-center">
+        <button id="closeCall" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        
+        <div class="w-24 h-24 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center my-6 relative animate-pulse">
+          <i class="fa-solid fa-microphone text-3xl text-emerald-400"></i>
+          <div class="absolute inset-0 rounded-full border border-emerald-400 animate-ping opacity-25"></div>
+        </div>
+
+        <h3 class="text-lg font-bold text-white mb-1">Live AI Voice Call</h3>
+        <p id="callStatus" class="text-xs text-emerald-400 mb-6">Listening... (Speak now in Urdu or English)</p>
+
+        <div id="callTranscript" class="w-full bg-slate-950/60 p-3 rounded-xl text-xs text-slate-300 min-h-[60px] max-h-[100px] overflow-y-auto mb-6 border border-white/5 text-left">
+          Aapki awaz ka intezaar hai...
+        </div>
+
+        <button id="endCallBtn" class="bg-red-600 hover:bg-red-500 text-white font-semibold py-3 px-8 rounded-full text-sm transition-all shadow-lg shadow-red-600/30 flex items-center gap-2">
+          <i class="fa-solid fa-phone-slash"></i> End Call
         </button>
       </div>
-    </section>
+    </div>
 
-    <section id="advice" class="panel hidden">
-      <div class="glass-card p-6 rounded-2xl border border-white/10 shadow-2xl">
-        <h2 class="text-base font-bold text-white mb-4">Crop Consultation Form</h2>
-        <form id="adviceForm" class="space-y-4">
-          <input name="location" placeholder="Region / District (e.g. Multan)" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none">
-          <textarea name="notes" rows="3" placeholder="Describe issue..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></textarea>
-          <button class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl text-sm" type="submit" id="adviceBtn">Get Consultation</button>
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="glass-card max-w-md w-full p-6 rounded-2xl relative border border-white/10 shadow-2xl">
+        <button id="closeAuth" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+
+        <h2 id="authTitle" class="text-xl font-bold text-white mb-2">Welcome Back</h2>
+        <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account to auto-save chat history</p>
+
+        <form id="authForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+            <input id="authEmail" type="email" placeholder="kisan@farm.com" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+            <input id="authPassword" type="password" placeholder="••••••••" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-lg shadow-emerald-600/30">
+            Login
+          </button>
         </form>
-        <div id="result" class="mt-4 p-4 rounded-xl glass-card text-sm text-slate-200 hidden"></div>
+
+        <p class="text-center text-xs text-slate-400 mt-4">
+          <span id="toggleAuthText">Don't have an account?</span>
+          <button id="toggleAuthBtn" class="text-emerald-400 font-semibold underline ml-1">Sign Up</button>
+        </p>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
-    Farman Kisan Hub • Powered by Gemini AI
-  </footer>
+    <!-- Navigation Tabs -->
+    <div class="max-w-3xl w-full mx-auto px-4 pt-4">
+      <div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/10">
+        <button class="tab active flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" data-tab="chat">
+          <i class="fa-solid fa-comments text-xs"></i> <span>Ask AI Assistant</span>
+        </button>
+        <button class="tab flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-2" data-tab="advice">
+          <i class="fa-solid fa-wheat-awn text-xs"></i> <span>Crop Consultation Form</span>
+        </button>
+      </div>
+    </div>
 
-  <!-- Firebase Modular Scripts -->
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between w-full">
+      <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
+        <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[50vh] max-h-[58vh] py-2"></div>
+
+        <!-- Quick Chips / Prompts -->
+        <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
+          <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3 py-2 rounded-xl transition-all cursor-pointer">
+            <span>Best crop to plant this season?</span>
+          </button>
+          <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3 py-2 rounded-xl transition-all cursor-pointer">
+            <span>Short duration crop options</span>
+          </button>
+          <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3 py-2 rounded-xl transition-all cursor-pointer">
+            <span>Wheat leaf yellowing treatment</span>
+          </button>
+        </div>
+
+        <!-- Input Bar with Voice & Send -->
+        <div class="glass-card p-2 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
+          <button id="micBtn" title="Speak to AI" class="text-slate-400 hover:text-emerald-400 p-2.5 rounded-xl transition-all">
+            <i class="fa-solid fa-microphone text-sm"></i>
+          </button>
+          <input id="q" type="text" placeholder="Ask anything in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-2">
+          <button id="send" class="primary bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5">
+            <span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </div>
+      </section>
+
+      <section id="advice" class="panel hidden">
+        <div class="glass-card p-6 rounded-2xl border border-white/10 shadow-2xl">
+          <h2 class="text-base font-bold text-white mb-4">Crop Consultation Form</h2>
+          <form id="adviceForm" class="space-y-4">
+            <input name="location" placeholder="Region / District (e.g. Multan)" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none">
+            <textarea name="notes" rows="3" placeholder="Describe issue..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></textarea>
+            <button class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl text-sm" type="submit" id="adviceBtn">Get Consultation</button>
+          </form>
+          <div id="result" class="mt-4 p-4 rounded-xl glass-card text-sm text-slate-200 hidden"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
+      Farman Kisan Hub • Powered by Gemini AI
+    </footer>
+  </div>
+
+  <!-- Firebase & App Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -223,16 +284,10 @@
     const toggleAuthText = document.getElementById("toggleAuthText");
     const userSection = document.getElementById("userSection");
 
-    // Event delegation or safe binding for dynamic buttons
     document.addEventListener("click", (e) => {
-      if (e.target.closest("#authBtn")) {
-        authModal.classList.remove("hidden");
-      }
+      if (e.target.closest("#authBtn")) authModal.classList.remove("hidden");
     });
-    
-    if (authBtn) {
-      authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
-    }
+    if (authBtn) authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
     closeAuth.addEventListener("click", () => authModal.classList.add("hidden"));
 
     toggleAuthBtn.addEventListener("click", () => {
@@ -247,17 +302,11 @@
       e.preventDefault();
       const email = document.getElementById("authEmail").value;
       const pass = document.getElementById("authPassword").value;
-
       try {
-        if (isSignUp) {
-          await createUserWithEmailAndPassword(auth, email, pass);
-        } else {
-          await signInWithEmailAndPassword(auth, email, pass);
-        }
+        if (isSignUp) await createUserWithEmailAndPassword(auth, email, pass);
+        else await signInWithEmailAndPassword(auth, email, pass);
         authModal.classList.add("hidden");
-      } catch (err) {
-        alert(err.message);
-      }
+      } catch (err) { alert(err.message); }
     });
 
     onAuthStateChanged(auth, async (user) => {
@@ -270,7 +319,7 @@
         document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
         loadUserHistory(user.uid);
       } else {
-        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login / Signup</button>`;
+        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login</button>`;
       }
     });
 
@@ -283,24 +332,36 @@
           botReply,
           createdAt: new Date()
         });
-      } catch (e) {
-        console.error("Cloud History Error:", e);
-      }
+      } catch (e) { console.error("Cloud Error:", e); }
     }
 
     async function loadUserHistory(uid) {
       try {
         document.getElementById("messages").innerHTML = "";
+        const historyList = document.getElementById("chatHistoryList");
+        historyList.innerHTML = `<div class="text-[11px] text-slate-500 uppercase tracking-wider px-2 py-1">Recent Chats</div>`;
+        
         const q = query(collection(db, "chats"), where("userId", "==", uid));
         const querySnapshot = await getDocs(q);
+        
+        let count = 1;
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           addBubble(data.userMsg, "me");
           addBubble(data.botReply, "bot");
+
+          // Add to sidebar history
+          const item = document.createElement("button");
+          item.className = "w-full text-left text-xs text-slate-300 hover:bg-white/5 p-2 rounded-xl truncate transition-all flex items-center gap-2";
+          item.innerHTML = `<i class="fa-solid fa-message text-[10px] text-emerald-400"></i> <span class="truncate">${data.userMsg}</span>`;
+          item.addEventListener("click", () => {
+            addBubble(data.userMsg, "me");
+            addBubble(data.botReply, "bot");
+          });
+          historyList.appendChild(item);
+          count++;
         });
-      } catch (e) {
-        console.error("History loading failed:", e);
-      }
+      } catch (e) { console.error("History error:", e); }
     }
 
     window.saveChatToCloud = saveChatToCloud;
@@ -317,19 +378,42 @@
       });
     });
 
+    // Sidebar controls
+    const sidebar = document.getElementById("sidebar");
+    const sidebarOverlay = document.getElementById("sidebarOverlay");
+    document.getElementById("toggleSidebar").addEventListener("click", () => {
+      sidebar.classList.remove("-translate-x-full");
+      sidebarOverlay.classList.remove("hidden");
+    });
+    sidebarOverlay.addEventListener("click", () => {
+      sidebar.classList.add("-translate-x-full");
+      sidebarOverlay.classList.add("hidden");
+    });
+    document.getElementById("closeSidebar").addEventListener("click", () => {
+      sidebar.classList.add("-translate-x-full");
+      sidebarOverlay.classList.add("hidden");
+    });
+
+    // New Chat button clears messages and history array
+    document.getElementById("newChatBtn").addEventListener("click", () => {
+      document.getElementById("messages").innerHTML = "";
+      conversationHistory = [];
+      if(window.innerWidth < 768) {
+        sidebar.classList.add("-translate-x-full");
+        sidebarOverlay.classList.add("hidden");
+      }
+    });
+
     const box = document.getElementById("messages");
     const input = document.getElementById("q");
     const sendBtn = document.getElementById("send");
 
-    // Global chat history array for ChatGPT-style multi-turn memory
     let conversationHistory = [];
 
     function addBubble(text, cls) {
       const isUser = cls.includes("me");
       const d = document.createElement("div");
       d.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
-      
-      // Auto detect Urdu text for correct styling alignment
       const isUrdu = /[\u0600-\u06FF]/.test(text);
 
       d.innerHTML = `
@@ -350,14 +434,11 @@
       if (!queryText) return;
       
       input.value = "";
-      
-      // Push to memory array
       conversationHistory.push({ role: "user", content: queryText });
 
       addBubble(queryText, "me");
-      const wait = addBubble("Soch raha hai...", "bot typing");
+      const wait = addBubble("Thinking / Soch raha hai...", "bot typing");
 
-      // Disable send button temporarily
       sendBtn.disabled = true;
       sendBtn.classList.add("opacity-50");
 
@@ -372,8 +453,6 @@
         wait.remove();
 
         const reply = data.reply || "No response received.";
-        
-        // Push bot response to memory array
         conversationHistory.push({ role: "assistant", content: reply });
 
         addBubble(reply, "bot");
@@ -393,13 +472,125 @@
     sendBtn.addEventListener("click", () => send());
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
     
-    // Quick chips click handler fix
     document.querySelectorAll(".chip").forEach((c) => {
       c.addEventListener("click", () => {
         const chipText = c.querySelector("span") ? c.querySelector("span").textContent : c.textContent;
         send(chipText);
       });
     });
+
+    // Voice Input (Speech-to-Text) using browser SpeechRecognition
+    const micBtn = document.getElementById("micBtn");
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ur-PK'; // Urdu / English support
+      recognition.continuous = false;
+
+      micBtn.addEventListener("click", () => {
+        recognition.start();
+        micBtn.classList.add("text-emerald-400", "animate-pulse");
+      });
+
+      recognition.onresult = (event) => {
+        const speechToText = event.results[0][0].transcript;
+        input.value = speechToText;
+        micBtn.classList.remove("text-emerald-400", "animate-pulse");
+        send(speechToText);
+      };
+
+      recognition.onerror = () => {
+        micBtn.classList.remove("text-emerald-400", "animate-pulse");
+      };
+    } else {
+      micBtn.style.display = 'none'; // Hide if browser doesn't support
+    }
+
+    // Live Voice Call Modal Logic
+    const callModal = document.getElementById("callModal");
+    const liveCallBtn = document.getElementById("liveCallBtn");
+    const closeCall = document.getElementById("closeCall");
+    const endCallBtn = document.getElementById("endCallBtn");
+    const callTranscript = document.getElementById("callTranscript");
+    const callStatus = document.getElementById("callStatus");
+
+    let callRecognition = null;
+
+    liveCallBtn.addEventListener("click", () => {
+      callModal.classList.remove("hidden");
+      startLiveCallSession();
+    });
+
+    closeCall.addEventListener("click", () => {
+      callModal.classList.add("hidden");
+      if(callRecognition) callRecognition.stop();
+    });
+
+    endCallBtn.addEventListener("click", () => {
+      callModal.classList.add("hidden");
+      if(callRecognition) callRecognition.stop();
+    });
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ur-PK'; // AI speaking in Urdu/English accent
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function startLiveCallSession() {
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        callTranscript.textContent = "Voice call feature is not supported in this browser.";
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      callRecognition = new SpeechRecognition();
+      callRecognition.lang = 'ur-PK';
+      callRecognition.continuous = false;
+      callRecognition.interimResults = false;
+
+      callStatus.textContent = "Listening... Bolna shuru karein.";
+      callRecognition.start();
+
+      callRecognition.onresult = async (event) => {
+        const userSpoken = event.results[0][0].transcript;
+        callTranscript.innerHTML = `<b class=\"text-amber-400\">Aap:</b> ${userSpoken}`;
+        callStatus.textContent = "AI soch raha hai...";
+
+        try {
+          const r = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: [{ role: "user", content: userSpoken }] }),
+          });
+          const data = await r.json();
+          const botReply = data.reply || "Maazrat, samajh nahi aaya.";
+          
+          callTranscript.innerHTML += `<br><b class=\"text-emerald-400\">AI:</b> ${botReply}`;
+          callStatus.textContent = "AI bol raha hai...";
+          speakText(botReply);
+
+          // Restart listening after speaking
+          setTimeout(() => {
+            if(!callModal.classList.contains("hidden")) {
+              callStatus.textContent = "Listening again...";
+              callRecognition.start();
+            }
+          }, 4000);
+        } catch(e) {
+          callStatus.textContent = "Connection error in call.";
+        }
+      };
+
+      callRecognition.onerror = () => {
+        if(!callModal.classList.contains("hidden")) {
+          setTimeout(() => { callRecognition.start(); }, 1000);
+        }
+      };
+    }
   </script>
 </body>
 </html>
