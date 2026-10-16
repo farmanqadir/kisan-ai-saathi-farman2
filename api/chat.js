@@ -20,24 +20,17 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // ChatGPT-style full conversation memory mapping
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = `You are Farman Kisan Hub AI Assistant. 
-STRICT RULES:
-1. Provide concise, direct, and exact answers (2-4 sentences).
-2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
-3. Remember previous conversation context and answer accordingly.
-4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
+    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in Roman Urdu or English without markdown stars (*). Remember conversation history.";
 
     if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
+      formattedContents[0].parts[0].text = `${systemPrompt}\n\n${formattedContents[0].parts[0].text}`;
     }
 
-    // Direct official Google Gemini endpoint call
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
