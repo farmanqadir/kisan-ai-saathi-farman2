@@ -17,7 +17,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Using v1 endpoint with gemini-1.5-flash
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: "POST",
@@ -36,10 +37,10 @@ export default async function handler(req, res) {
       text = text.replace(/[*#_]/g, '').trim();
       return res.status(200).json({ reply: text });
     } else {
-      return res.status(200).json({ reply: "API Error: " + JSON.stringify(data.error || data) });
+      return res.status(200).json({ reply: "API Error: " + JSON.stringify(data.error?.message || "Unknown error") });
     }
 
   } catch (err) {
-    return res.status(200).json({ reply: "Catch Error: " + err.message });
+    return res.status(200).json({ reply: "Server error: " + err.message });
   }
 }
