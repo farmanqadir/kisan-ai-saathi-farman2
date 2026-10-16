@@ -1,3 +1,5 @@
+import { GoogleGenAI } from '@google/genai';
+
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -20,40 +22,39 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Format chat history for full ChatGPT-style memory
-    const formattedContents = messages.map(msg => ({
+    // Official Google GenAI SDK Client Initialization
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Format chat history for full ChatGPT-style memory context
+    const contents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in 2-4 sentences in the same language without markdown stars (*). Remember chat context.";
+    const systemInstruction = `You are Farman Kisan Hub AI Assistant. 
+STRICT RULES:
+1. Provide concise, direct, and exact answers (2-4 sentences).
+2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
+3. Remember previous conversation context and answer accordingly.
+4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
-    if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${systemPrompt}\n\n${formattedContents[0].parts[0].text}`;
-    }
-
-    // Exact model string with clean hyphen
-    const model = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: formattedContents })
+    // Official SDK Call using latest Flash model
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: contents,
+      config: {
+        systemInstruction: systemInstruction,
+      }
     });
 
-    const data = await response.json();
-
-    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      let cleanReply = data.candidates[0].content.parts[0].text.replace(/[*#_]/g, '').trim();
+    if (response && response.text) {
+      let cleanReply = response.text.replace(/[*#_]/g, '').trim();
       return res.status(200).json({ reply: cleanReply });
     } else {
-      return res.status(200).json({ 
-        reply: data?.error?.message ? `API Error: ${data.error.message}` : "Server error, please try again." 
-      });
+      return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
     }
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server error: " + err.message });
+    return res.status(200).json({ reply: "API Error: " + err.message });
   }
 }
