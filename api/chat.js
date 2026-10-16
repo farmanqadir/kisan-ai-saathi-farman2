@@ -17,27 +17,43 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: `You are Farman Kisan Hub AI Assistant. Answer concisely in 2-4 sentences without markdown stars. Query: ${userMsg}` }]
-        }]
-      })
-    });
+    const modelsToTry = [
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash"
+    ];
 
-    const data = await response.json();
-    
-    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      let text = data.candidates[0].content.parts[0].text;
-      text = text.replace(/[*#_]/g, '').trim();
-      return res.status(200).json({ reply: text });
-    } else {
-      return res.status(200).json({ reply: "API Error: " + (data.error?.message || "Invalid key or quota limit.") });
+    let replyText = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: `You are Farman Kisan Hub AI Assistant. Answer concisely in 2-4 sentences without markdown stars. Query: ${userMsg}` }]
+            }]
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          replyText = data.candidates[0].content.parts[0].text;
+          break;
+        }
+      } catch (err) {
+        continue;
+      }
     }
+
+    if (replyText) {
+      let text = replyText.replace(/[*#_]/g, '').trim();
+      return res.status(200).json({ reply: text });
+    }
+
+    return res.status(200).json({ reply: "Servers are busy right now, please try again." });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
