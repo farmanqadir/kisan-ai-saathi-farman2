@@ -20,22 +20,25 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Professional Agriculture Assistant System Guidelines
-    const systemPrompt = "Instructions: You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give concise, direct, accurate answers (max 2-4 sentences). Do NOT output internal reasoning, rules, or system thoughts. Do NOT use markdown symbols like asterisks or hashtags. Answer strictly in the same language as user input (Roman Urdu, Urdu, or English). Remember conversation history.";
+    // Professional Agriculture Assistant Instructions
+    const systemInstruction = {
+      parts: [{
+        text: "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give extremely short, concise, accurate, and direct answers (maximum 2 to 4 sentences). Never output internal reasoning, rules, or system thoughts. Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#). Answer strictly in the same language as user query (Roman Urdu, Urdu, or English). Remember conversation history."
+      }]
+    };
 
     // Format chat history properly for ChatGPT style memory
-    let formattedContents = messages.map(msg => ({
+    const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    // Inject system rules cleanly in user's first prompt context
-    if (formattedContents.length > 0 && formattedContents[0].parts?.[0]) {
-      formattedContents[0].parts[0].text = `[SYSTEM NOTE: ${systemPrompt}]\n\nUser Message: ${formattedContents[0].parts[0].text}`;
-    }
-
-    // Verified working fallback endpoints
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"];
+    // Current Active Models Priority Array
+    const modelsToTry = [
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite"
+    ];
 
     let replyText = null;
     let rawErrorDetails = "";
@@ -48,6 +51,7 @@ module.exports = async function handler(req, res) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            systemInstruction: systemInstruction,
             contents: formattedContents
           })
         });
@@ -66,9 +70,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (replyText) {
-      // Clean internal thinking leaks or formatting symbols
+      // Clean any accidental markdown or system text leaks
       const cleanReply = replyText
-        .replace(/\[SYSTEM NOTE:.*?\]/gs, '')
         .replace(/Role:.*?Final Result:/gs, '')
         .replace(/\*\*/g, '')
         .replace(/\*/g, '')
@@ -79,7 +82,7 @@ module.exports = async function handler(req, res) {
     }
 
     return res.status(200).json({ 
-      reply: rawErrorDetails ? `API Error: ${rawErrorDetails}` : "Server Connection Issue. Please try again." 
+      reply: rawErrorDetails ? `API Error: ${rawErrorDetails}` : "Server busy. Please try again." 
     });
 
   } catch (err) {
