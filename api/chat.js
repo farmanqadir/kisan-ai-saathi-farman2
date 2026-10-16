@@ -22,10 +22,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Official Google GenAI SDK Client Initialization
+    // Official Google GenAI SDK Client
     const ai = new GoogleGenAI({ apiKey });
 
-    // Format chat history for full ChatGPT-style memory context
+    // Chat History formatting for full memory
     const contents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
@@ -38,7 +38,7 @@ STRICT RULES:
 3. Remember previous conversation context and answer accordingly.
 4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
-    // Official SDK Call using latest Flash model
+    // Official SDK API Call
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: contents,
