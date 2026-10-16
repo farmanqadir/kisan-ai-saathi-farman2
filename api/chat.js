@@ -20,35 +20,64 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
+    // Format chat history for full memory context
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in Roman Urdu or English without markdown stars (*). Remember conversation history.";
+    const systemPrompt = `You are Farman Kisan Hub AI Assistant. 
+STRICT RULES:
+1. Provide concise, direct, and exact answers (2-4 sentences).
+2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
+3. Remember previous conversation context and answer accordingly.
+4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
 
     if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${systemPrompt}\n\n${formattedContents[0].parts[0].text}`;
+      formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // Backup models list if 3.8 is busy/overloaded
+    const modelsToTry = [
+      "gemini-3.8-flash",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash"
+    ];
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: formattedContents })
-    });
+    let replyText = null;
+    let lastError = null;
 
-    const data = await response.json();
+    for (const model of modelsToTry) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: formattedContents })
+        });
 
-    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      let cleanReply = data.candidates[0].content.parts[0].text.replace(/[*#_]/g, '').trim();
+        const data = await response.json();
+
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          replyText = data.candidates[0].content.parts[0].text;
+          break; // Stop loop as soon as a working response is received
+        } else if (data?.error?.message) {
+          lastError = data.error.message;
+        }
+      } catch (err) {
+        lastError = err.message;
+        continue;
+      }
+    }
+
+    if (replyText) {
+      let cleanReply = replyText.replace(/[*#_]/g, '').trim();
       return res.status(200).json({ reply: cleanReply });
-    } else {
-      return res.status(200).json({ 
-        reply: data?.error?.message ? `API Error: ${data.error.message}` : "Server busy, please try again." 
-      });
     }
+
+    return res.status(200).json({ 
+      reply: lastError ? `API Error: ${lastError}` : "Server busy, please try again." 
+    });
 
   } catch (err) {
     return res.status(200).json({ reply: "Server Connection Error: " + err.message });
