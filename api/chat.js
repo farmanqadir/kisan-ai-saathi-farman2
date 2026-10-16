@@ -26,53 +26,32 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer concisely in Roman Urdu, Urdu, or English without markdown stars (*). Remember conversation context.";
+    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in 2-4 sentences in Roman Urdu, Urdu, or English without markdown stars (*). Remember conversation history.";
 
     if (formattedContents.length > 0) {
       formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // Standard models with pure ASCII hyphens
-    const modelsToTry = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
+    // Clean model names with standard hyphens
+    const targetModel = "gemini-1.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(targetModel)}:generateContent?key=${apiKey}`;
 
-    let replyText = null;
-    let lastError = null;
-
-    for (const model of modelsToTry) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: formattedContents })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
-          break;
-        } else if (data?.error?.message) {
-          lastError = data.error.message;
-        }
-      } catch (err) {
-        lastError = err.message;
-        continue;
-      }
-    }
-
-    if (replyText) {
-      let cleanReply = replyText.replace(/[*#_]/g, '').trim();
-      return res.status(200).json({ reply: cleanReply });
-    }
-
-    return res.status(200).json({ 
-      reply: lastError ? `API Error: ${lastError}` : "Server busy, please try again." 
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: formattedContents })
     });
+
+    const data = await response.json();
+
+    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      let cleanReply = data.candidates[0].content.parts[0].text.replace(/[*#_]/g, '').trim();
+      return res.status(200).json({ reply: cleanReply });
+    } else {
+      return res.status(200).json({ 
+        reply: data?.error?.message ? `API Error: ${data.error.message}` : "Server busy, please try again." 
+      });
+    }
 
   } catch (err) {
     return res.status(200).json({ reply: "Server Connection Error: " + err.message });
