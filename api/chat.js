@@ -20,28 +20,24 @@ export default async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Format chat history for full ChatGPT-style memory context
+    // Full Chat Memory Mapping for Gemini
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
-STRICT RULES:
-1. Provide concise, direct, and exact answers.
-2. NEVER use markdown characters like stars (*), double stars (**), or hashtags (#). Use clean plain text only.
-3. Remember previous conversation context and answer accordingly.
-4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
+    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in 2-4 sentences in the same language without markdown stars (*). Remember chat context.";
 
+    // Inject System Instruction into first user message
     if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
+      formattedContents[0].parts[0].text = `${systemPrompt}\n\n${formattedContents[0].parts[0].text}`;
     }
 
-    // Active models list to try sequentially
+    // Clean model identifiers (no typos)
     const modelsToTry = [
+      "gemini-1.5-flash",
       "gemini-2.0-flash",
-      "gemini-2.5-flash",
-      "gemini-1.5-flash"
+      "gemini-1.5-pro"
     ];
 
     let replyText = null;
@@ -75,9 +71,8 @@ STRICT RULES:
       return res.status(200).json({ reply: cleanReply });
     }
 
-    // Return the actual error if all models fail
     return res.status(200).json({ 
-      reply: lastError ? `API Issue: ${lastError}` : "Server busy, please try again." 
+      reply: lastError ? `API Error: ${lastError}` : "Server busy, please try again." 
     });
 
   } catch (err) {
