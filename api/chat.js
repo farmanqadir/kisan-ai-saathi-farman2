@@ -32,8 +32,8 @@ module.exports = async function handler(req, res) {
       formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // Clean model names with standard hyphens
-    const targetModel = "gemini-1.5-flash";
+    // UPDATED MODEL NAME:
+    const targetModel = "gemini-2.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(targetModel)}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
