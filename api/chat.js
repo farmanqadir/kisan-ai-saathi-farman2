@@ -36,10 +36,10 @@ export default async function handler(req, res) {
       text = text.replace(/[*#_]/g, '').trim();
       return res.status(200).json({ reply: text });
     } else {
-      return res.status(200).json({ reply: "Aap ka jawab taiyar hai, kripya dobara try karein." });
+      return res.status(200).json({ reply: "API Error: " + JSON.stringify(data.error || data) });
     }
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server error: " + err.message });
+    return res.status(200).json({ reply: "Catch Error: " + err.message });
   }
 }
