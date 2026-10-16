@@ -9,9 +9,9 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const messages = body?.messages || [];
+    const messages = body?.messages;
 
-    if (!messages || messages.length === 0) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(200).json({ reply: "Request format error." });
     }
 
@@ -20,40 +20,96 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Format chat history for full memory context
-    const formattedContents = messages.map(msg => ({
+    // STRICT RULES FOR CONCISE, STAR-FREE, EXACT ANSWERS
+    const strictSystemPrompt = `You are Farman Kisan Hub AI Assistant. 
+STRICT RULES:
+1. Provide extremely short, concise, direct, and exact answers (maximum 2 to 4 sentences).
+2. NEVER use markdown characters like stars (*), double stars (**), bullet stars (*), or hashtags (#). Use clean plain text only.
+3. Remember previous conversation context and answer accordingly.
+4. Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).`;
+
+    // Map conversation history properly like ChatGPT style memory
+    let formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const systemPrompt = "You are Farman Kisan Hub AI Assistant. Answer directly and concisely in 2-4 sentences in Roman Urdu, Urdu, or English without markdown stars (*). Remember conversation history.";
-
-    if (formattedContents.length > 0) {
-      formattedContents[0].parts[0].text = `${systemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
+    // Inject system instructions neatly into the very first user prompt
+    if (formattedContents.length > 0 && formattedContents[0].parts && formattedContents[0].parts[0]) {
+      formattedContents[0].parts[0].text = `${strictSystemPrompt}\n\nUser Question: ${formattedContents[0].parts[0].text}`;
     }
 
-    // UPDATED MODEL NAME:
-    const targetModel = "gemini-2.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(targetModel)}:generateContent?key=${apiKey}`;
+    // Dynamic Discovery of Active Google Models
+    let availableModels = [];
+    try {
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+      const listRes = await fetch(listUrl);
+      const listData = await listRes.json();
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: formattedContents })
-    });
+      if (listData?.models && Array.isArray(listData.models)) {
+        availableModels = listData.models
+          .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
+          .map(m => m.name.replace("models/", ""));
+      }
+    } catch (e) {
+      console.error("List models fetch error:", e);
+    }
 
-    const data = await response.json();
+    // Priority models list (including your preferred flash models)
+    const priorityOrder = [
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-2.5-flash",
+      "gemini-1.5-flash"
+    ];
 
-    if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      let cleanReply = data.candidates[0].content.parts[0].text.replace(/[*#_]/g, '').trim();
+    let modelsToTry = priorityOrder.filter(m => availableModels.includes(m));
+    if (modelsToTry.length === 0) {
+      modelsToTry = availableModels.length > 0 ? availableModels : priorityOrder;
+    }
+
+    let replyText = null;
+    let lastError = "";
+
+    // Loop through available working models with full history fallback
+    for (const model of modelsToTry) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: formattedContents })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          replyText = data.candidates[0].content.parts[0].text;
+          break;
+        } else if (data?.error?.message) {
+          lastError = data.error.message;
+        }
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+
+    if (replyText) {
+      // Clean any markdown stars or formatting symbols automatically
+      const cleanReply = replyText
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#/g, '')
+        .trim();
+
       return res.status(200).json({ reply: cleanReply });
-    } else {
-      return res.status(200).json({ 
-        reply: data?.error?.message ? `API Error: ${data.error.message}` : "Server busy, please try again." 
-      });
     }
+
+    return res.status(200).json({ reply: "Maazrat, abhi tamam AI models par high traffic hai. Baraye meherbani thori der baad dobara koshish karein." });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server Connection Error: " + err.message });
+    return res.status(200).json({ reply: "Server exception error: " + err.message });
   }
 };
