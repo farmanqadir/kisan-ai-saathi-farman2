@@ -10,7 +10,6 @@ module.exports = async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const messages = body?.messages;
-    const isCall = body?.isCall || false;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(200).json({ reply: "Request format error." });
@@ -21,22 +20,28 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
+    // Professional Agriculture Assistant Instructions
     const systemInstruction = {
       parts: [{
-        text: isCall 
-          ? "You are Farman Kisan Hub Voice Assistant. Provide a complete, natural 1-2 sentence response. Reply strictly in the language used by the user (Urdu, Roman Urdu, or English). Clean plain text only."
-          : "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give complete, direct, concise answers (2 to 4 full sentences). Do NOT use markdown asterisks or hashtags. Answer strictly in the language of query."
+        text: "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give extremely short, concise, accurate, and direct answers (maximum 2 to 4 sentences). Never output internal reasoning, rules, or system thoughts. Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#). Answer strictly in the same language as user query (Roman Urdu, Urdu, or English). Remember conversation history."
       }]
     };
 
+    // Format chat history properly for ChatGPT style memory
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    const modelsToTry = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+    // Current Active Models Priority Array
+    const modelsToTry = [
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite"
+    ];
 
     let replyText = null;
+    let rawErrorDetails = "";
 
     for (const model of modelsToTry) {
       try {
@@ -47,11 +52,7 @@ module.exports = async function handler(req, res) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             systemInstruction: systemInstruction,
-            contents: formattedContents,
-            generationConfig: {
-              maxOutputTokens: 1000,
-              temperature: 0.4
-            }
+            contents: formattedContents
           })
         });
 
@@ -60,20 +61,31 @@ module.exports = async function handler(req, res) {
         if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           replyText = data.candidates[0].content.parts[0].text;
           break;
+        } else if (data?.error?.message) {
+          rawErrorDetails = data.error.message;
         }
       } catch (err) {
-        console.error(err);
+        rawErrorDetails = err.message;
       }
     }
 
     if (replyText) {
-      const cleanReply = replyText.replace(/[*#]/g, '').trim();
+      // Clean any accidental markdown or system text leaks
+      const cleanReply = replyText
+        .replace(/Role:.*?Final Result:/gs, '')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#/g, '')
+        .trim();
+
       return res.status(200).json({ reply: cleanReply });
     }
 
-    return res.status(200).json({ reply: "Maazrat, dobara koshish karein." });
+    return res.status(200).json({ 
+      reply: rawErrorDetails ? `API Error: ${rawErrorDetails}` : "Server busy. Please try again." 
+    });
 
   } catch (err) {
-    return res.status(200).json({ reply: "Server error: " + err.message });
+    return res.status(200).json({ reply: "Server exception error: " + err.message });
   }
 };
