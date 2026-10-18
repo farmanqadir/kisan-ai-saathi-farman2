@@ -1,19 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-
-// Root path par explicit index.html serve karna
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Baaki static files ke liye
-app.use(express.static(__dirname));
 
 // Chat API Route
 app.post('/api/chat', async (req, res) => {
@@ -28,7 +19,7 @@ app.post('/api/chat', async (req, res) => {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel settings." });
     }
 
     const systemInstruction = {
@@ -85,5 +76,4 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Vercel ke liye export
 module.exports = app;
