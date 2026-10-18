@@ -1,13 +1,21 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Static files serve karne ke liye
 app.use(express.static(__dirname));
 
+// Root path routing taaki direct index.html khule
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Chat API Route
 app.post('/api/chat', async (req, res) => {
   try {
     const { messages, isCall } = req.body;
@@ -42,7 +50,10 @@ app.post('/api/chat', async (req, res) => {
           body: JSON.stringify({
             systemInstruction: systemInstruction,
             contents: formattedContents,
-            generationConfig: { maxOutputTokens: 1000, temperature: 0.4 }
+            generationConfig: { 
+              maxOutputTokens: 2048, // Adhoore jawab khatam karne ke liye tokens 2048 hain
+              temperature: 0.4 
+            }
           })
         });
 
@@ -67,5 +78,5 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Vercel serverless ke liye zaroori export (app.listen hata diya hai)
+module.exports = app;
