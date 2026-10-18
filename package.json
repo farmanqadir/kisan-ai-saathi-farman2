@@ -1,5 +1,6 @@
 {
-  "name": "farman-kisan-hub",
-  "version": "1.0.0",
-  "private": true
+  "rewrites": [
+    { "source": "/api/chat", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
