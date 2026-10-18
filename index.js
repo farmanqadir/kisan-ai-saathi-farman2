@@ -1,3 +1,8 @@
-module.exports = (req, res) => {
-  res.status(200).send("Farman Kisan Hub Active");
-};
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Farman Kisan Hub API is Running');
+});
+
+module.exports = app;
