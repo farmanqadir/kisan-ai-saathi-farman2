@@ -1,4 +1,5 @@
 module.exports = async function handler(req, res) {
+  // CORS Headers
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -32,9 +33,8 @@ module.exports = async function handler(req, res) {
     }));
 
     const modelsToTry = [
-      "gemini-3.8-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash-lite"
+      "gemini-1.5-flash",
+      "gemini-1.5-pro"
     ];
 
     let replyText = null;
