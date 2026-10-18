@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    // Current Active Models Priority Array
+    // Same models array as requested
     const modelsToTry = [
       "gemini-3.8-flash",
       "gemini-3.6-flash",
