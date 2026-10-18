@@ -7,10 +7,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Static files serve karne ke liye
+// Static files aur root path serve karne ke liye
 app.use(express.static(__dirname));
 
-// Root path routing taaki direct index.html khule
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -18,11 +17,17 @@ app.get('/', (req, res) => {
 // Chat API Route
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, isCall } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const messages = body?.messages;
+    const isCall = body?.isCall || false;
 
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(200).json({ reply: "Request format error." });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing." });
+      return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
     const systemInstruction = {
@@ -50,9 +55,9 @@ app.post('/api/chat', async (req, res) => {
           body: JSON.stringify({
             systemInstruction: systemInstruction,
             contents: formattedContents,
-            generationConfig: { 
-              maxOutputTokens: 2048, 
-              temperature: 0.4 
+            generationConfig: {
+              maxOutputTokens: 2048,
+              temperature: 0.4
             }
           })
         });
@@ -73,6 +78,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     return res.status(200).json({ reply: "Maazrat, dobara koshish karein." });
+
   } catch (err) {
     return res.status(200).json({ reply: "Server error: " + err.message });
   }
