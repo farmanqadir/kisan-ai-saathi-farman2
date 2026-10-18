@@ -1,10 +1,16 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Root URL par Frontend (index.html) serve karne ke liye
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Chat API Route
 app.post('/api/chat', async (req, res) => {
