@@ -7,13 +7,13 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Static files (HTML, CSS, JS) serve karne ke liye
-app.use(express.static(__dirname));
-
-// Root path par explicit index.html serve karna taaki 'Cannot GET /' na aaye
+// Root path par explicit index.html serve karna
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Baaki static files ke liye
+app.use(express.static(__dirname));
 
 // Chat API Route
 app.post('/api/chat', async (req, res) => {
@@ -85,5 +85,5 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Vercel serverless ke liye export zaroori hai
+// Vercel ke liye export
 module.exports = app;
