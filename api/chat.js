@@ -20,20 +20,17 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: GEMINI_API_KEY missing in Vercel." });
     }
 
-    // Professional Agriculture Assistant Instructions
     const systemInstruction = {
       parts: [{
         text: "You are Farman Kisan Hub AI Assistant, an expert agricultural advisor. Give extremely short, concise, accurate, and direct answers (maximum 2 to 4 sentences). Never output internal reasoning, rules, or system thoughts. Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#). Answer strictly in the same language as user query (Roman Urdu, Urdu, or English). Remember conversation history."
       }]
     };
 
-    // Format chat history properly for ChatGPT style memory
     const formattedContents = messages.map(msg => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }]
     }));
 
-    // Same models array as requested
     const modelsToTry = [
       "gemini-3.8-flash",
       "gemini-3.6-flash",
@@ -70,7 +67,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (replyText) {
-      // Clean any accidental markdown or system text leaks
       const cleanReply = replyText
         .replace(/Role:.*?Final Result:/gs, '')
         .replace(/\*\*/g, '')
