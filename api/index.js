@@ -10,7 +10,7 @@ app.use(cors());
 // Static files serve karne ke liye
 app.use(express.static(__dirname));
 
-// Root path routing
+// Root path routing taaki direct index.html khule
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -51,7 +51,7 @@ app.post('/api/chat', async (req, res) => {
             systemInstruction: systemInstruction,
             contents: formattedContents,
             generationConfig: { 
-              maxOutputTokens: 2048, // Adhoore jawab ko khatam karne ke liye tokens barha diye hain
+              maxOutputTokens: 2048, 
               temperature: 0.4 
             }
           })
@@ -78,5 +78,4 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Vercel serverless ke liye export
 module.exports = app;
