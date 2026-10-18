@@ -7,10 +7,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Static files (CSS, JS, images) serve karne ke liye
+// Static files serve karne ke liye
 app.use(express.static(__dirname));
 
-// Main Root Page ('/') par index.html bhejne ke liye (Cannot GET / error resolution)
+// Main page route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -75,5 +75,5 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Vercel serverless ke liye export zaroori hai
+module.exports = app;
