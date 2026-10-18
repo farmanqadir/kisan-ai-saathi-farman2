@@ -1,20 +1,24 @@
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Frontend UI Serve Karein
+// Serve Static Frontend (index.html)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'index.html'));
 });
 
-// Serverless Handler Redirect
-app.use('/api/chat', (req, res) => {
-  const handler = require('./api/chat.js');
-  return handler(req, res);
+// Direct Chat API route within index.js (to avoid missing file issues)
+app.post('/api/chat', async (req, res) => {
+  try {
+    const chatHandler = require('./api/chat.js');
+    return await chatHandler(req, res);
+  } catch (err) {
+    return res.status(500).json({ reply: "API Error: " + err.message });
+  }
 });
 
 module.exports = app;
