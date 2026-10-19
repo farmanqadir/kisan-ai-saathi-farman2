@@ -1,3 +1,12 @@
+const VERSION = "v4-no-3.8";
+
+const MODELS = [
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
+
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -5,8 +14,14 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Browser mein seedha URL kholne par ye dikhega (version check ke liye)
   if (req.method !== "POST") {
-    return res.status(200).json({ reply: "Invalid request method." });
+    return res.status(200).json({
+      reply: "Invalid request method.",
+      version: VERSION,
+      models: MODELS,
+    });
   }
 
   try {
@@ -37,19 +52,18 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Free-tier friendly models (zyada daily quota), 3.8-flash hata diya (uska limit sirf 20/day hai)
-    const modelsToTry = [
-      "gemini-2.5-flash-lite",
-      "gemini-flash-lite-latest",
-      "gemini-2.5-flash",
-      "gemini-flash-latest",
-    ];
-
     let replyText = null;
-    let rawErrorDetails = "";
+    const errors = [];
 
-    for (const model of modelsToTry) {
+    for (const model of MODELS) {
       try {
+        const is25 = model.startsWith("gemini-2.5");
+        const generationConfig = {
+          temperature: 0.4,
+          maxOutputTokens: is25 ? 300 : 1200,
+        };
+        if (is25) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+
         const url =
           "https://generativelanguage.googleapis.com/v1beta/models/" +
           model +
@@ -62,24 +76,28 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({
             systemInstruction: systemInstruction,
             contents: formattedContents,
-            generationConfig: {
-              maxOutputTokens: 300,
-              temperature: 0.4,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
+            generationConfig: generationConfig,
           }),
         });
 
         const data = await response.json();
+        const parts = data?.candidates?.[0]?.content?.parts || [];
+        const text = parts.map((p) => p.text || "").join("").trim();
 
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
+        if (response.ok && text) {
+          replyText = text;
           break;
-        } else if (data?.error?.message) {
-          rawErrorDetails = data.error.message;
+        }
+
+        if (data?.error?.message) {
+          errors.push(model + ": " + data.error.message.slice(0, 300));
+        } else {
+          errors.push(
+            model + ": empty reply (" + (data?.candidates?.[0]?.finishReason || "no candidates") + ")"
+          );
         }
       } catch (err) {
-        rawErrorDetails = err.message;
+        errors.push(model + ": " + err.message);
       }
     }
 
@@ -93,8 +111,8 @@ module.exports = async function handler(req, res) {
     }
 
     return res.status(200).json({
-      reply: rawErrorDetails
-        ? "API Error: " + rawErrorDetails
+      reply: errors.length
+        ? "API Error: " + errors.join(" || ")
         : "Server busy. Please try again.",
     });
   } catch (err) {
