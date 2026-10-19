@@ -1,650 +1,283 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ur" dir="ltr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kisan AI Saathi - Farman Kisan Hub</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-
-    :root {
-      --primary: #16a34a;
-      --primary-dark: #15803d;
-      --bg-dark: #0a0f0d;
-      --bg-card: #111813;
-      --bg-input: #1a241d;
-      --text-main: #e8f5e9;
-      --text-muted: #9ca3af;
-      --border: #243328;
-    }
-
-    body {
-      background: var(--bg-dark);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-    }
-
-    /* ================= SIDEBAR (Chat History) ================= */
-    .sidebar {
-      width: 280px;
-      background: var(--bg-card);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      position: fixed;
-      left: 0; top: 0;
-      z-index: 100;
-      transition: transform 0.3s ease;
-    }
-
-    .sidebar-header {
-      padding: 18px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .sidebar-logo {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 600; font-size: 15px;
-    }
-    .sidebar-logo i { color: var(--primary); font-size: 20px; }
-
-    .new-chat-btn {
-      margin: 14px 16px 8px;
-      padding: 11px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      transition: background 0.2s;
-    }
-    .new-chat-btn:hover { background: var(--primary-dark); }
-
-    .history-label {
-      padding: 12px 20px 6px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-    }
-
-    .history-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 4px 10px 10px;
-    }
-
-    .history-item {
-      padding: 11px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      color: var(--text-main);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 4px;
-      transition: background 0.2s;
-      position: relative;
-    }
-    .history-item:hover { background: var(--bg-input); }
-    .history-item.active { background: var(--bg-input); border-left: 3px solid var(--primary); }
-    .history-item i { color: var(--text-muted); font-size: 15px; }
-    .history-item span {
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;
-    }
-    .history-item .del-chat {
-      margin-left: auto;
-      background: none; border: none; color: var(--text-muted);
-      cursor: pointer; font-size: 14px; padding: 2px;
-      display: none;
-    }
-    .history-item:hover .del-chat { display: block; }
-    .history-item .del-chat:hover { color: #ef4444; }
-
-    .sidebar-footer {
-      padding: 14px 16px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex; align-items: center; gap: 10px;
-    }
-    .sidebar-footer .user-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 600; font-size: 13px;
-    }
-
-    /* ================= MAIN AREA ================= */
-    .main-area {
-      flex: 1;
-      margin-left: 280px;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    .topbar {
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--bg-card);
-    }
-    .topbar-left { display: flex; align-items: center; gap: 12px; }
-    .menu-btn {
-      display: none;
-      background: none; border: none; color: var(--text-main);
-      font-size: 22px; cursor: pointer;
-    }
-    .topbar-title { font-size: 16px; font-weight: 600; }
-    .topbar-actions { display: flex; gap: 10px; align-items: center; }
-    .btn-login {
-      padding: 8px 18px;
-      background: transparent;
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      border-radius: 8px;
-      cursor: pointer; font-size: 13px; font-weight: 500;
-      transition: all 0.2s;
-    }
-    .btn-login:hover { background: var(--primary); color: #fff; }
-    .btn-signup {
-      padding: 8px 18px;
-      background: var(--primary);
-      border: 1px solid var(--primary);
-      color: #fff;
-      border-radius: 8px;
-      cursor: pointer; font-size: 13px; font-weight: 500;
-      transition: all 0.2s;
-    }
-    .btn-signup:hover { background: var(--primary-dark); }
-
-    /* ================= CHAT AREA ================= */
-    .chat-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .msg-row { display: flex; gap: 12px; max-width: 850px; width: 100%; margin: 0 auto; }
-    .msg-row.user { flex-direction: row-reverse; }
-
-    .msg-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-    }
-    .msg-row.ai .msg-avatar { background: var(--primary); color: #fff; }
-    .msg-row.user .msg-avatar { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); }
-
-    .msg-bubble {
-      padding: 13px 17px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.6;
-      max-width: 75%;
-      word-wrap: break-word;
-    }
-    .msg-row.ai .msg-bubble { background: var(--bg-card); border: 1px solid var(--border); border-top-left-radius: 4px; }
-    .msg-row.user .msg-bubble { background: var(--primary-dark); border-top-right-radius: 4px; }
-
-    .typing-dots { display: flex; gap: 5px; padding: 6px 2px; }
-    .typing-dots span {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--text-muted);
-      animation: blink 1.4s infinite both;
-    }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink { 0%,80%,100% { opacity: .3; } 40% { opacity: 1; } }
-
-    /* ================= INPUT BAR ================= */
-    .input-area {
-      padding: 16px 24px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--bg-card);
-    }
-    .input-wrapper {
-      max-width: 850px;
-      margin: 0 auto;
-      display: flex; align-items: center; gap: 10px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 8px 10px;
-    }
-    .input-wrapper input {
-      flex: 1;
-      background: transparent;
-      border: none; outline: none;
-      color: var(--text-main);
-      font-size: 14px;
-      padding: 8px 6px;
-    }
-    .input-wrapper input::placeholder { color: var(--text-muted); }
-
-    .icon-btn {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 19px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-    .icon-btn:hover { background: var(--bg-card); color: var(--text-main); }
-
-    .icon-btn.mic-listening {
-      color: #ef4444;
-      animation: pulse 1.2s infinite;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
-      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-    }
-
-    .send-btn {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      border: none;
-      background: var(--primary);
-      color: #fff;
-      font-size: 17px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .send-btn:hover { background: var(--primary-dark); }
-    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .input-hint {
-      max-width: 850px; margin: 8px auto 0;
-      font-size: 11px; color: var(--text-muted); text-align: center;
-    }
-
-    /* ================= RESPONSIVE ================= */
-    @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); }
-      .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
-      .main-area { margin-left: 0; }
-      .menu-btn { display: block; }
-      .msg-bubble { max-width: 88%; }
-    }
-
-    .sidebar-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 99;
-    }
-    .sidebar-overlay.show { display: block; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farman Kisan Hub AI Assistant</title>
+    <!-- Tailwind CSS & FontAwesome Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+<body class="bg-gray-100 h-screen flex flex-col md:flex-row overflow-hidden font-sans">
 
-<body>
+    <!-- Sidebar: History & Profile -->
+    <aside class="w-full md:w-80 bg-emerald-900 text-white flex flex-col justify-between border-r border-emerald-800 shadow-lg shrink-0">
+        <div>
+            <!-- Header -->
+            <div class="p-4 border-b border-emerald-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-seedling text-emerald-400 text-2xl"></i>
+                    <span class="font-bold text-lg">Farman Kisan Hub</span>
+                </div>
+            </div>
 
-  <!-- ============ SIDEBAR ============ -->
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+            <!-- New Chat Button -->
+            <div class="p-4">
+                <button onclick="startNewChat()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition duration-200 shadow">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Nayi Guftagu (New Chat)</span>
+                </button>
+            </div>
 
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <i class="bi bi-flower1"></i> Kisan AI Saathi
-      </div>
-    </div>
-
-    <button class="new-chat-btn" id="newChatBtn">
-      <i class="bi bi-plus-lg"></i> New Chat
-    </button>
-
-    <div class="history-label">Chat History</div>
-    <div class="history-list" id="historyList">
-      <!-- JS se fill hoga -->
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="user-avatar" id="userAvatar">F</div>
-      <div>
-        <div style="font-size:13px; color:var(--text-main);" id="userName">Guest User</div>
-        <div style="font-size:11px;">Free Plan</div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ============ MAIN ============ -->
-  <div class="main-area">
-    <div class="topbar">
-      <div class="topbar-left">
-        <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
-        <div class="topbar-title" id="topbarTitle">Nayi Guftagu</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn-login" id="loginBtn">Login</button>
-        <button class="btn-signup" id="signupBtn">Sign Up</button>
-      </div>
-    </div>
-
-    <div class="chat-container" id="chatContainer">
-      <div class="msg-row ai">
-        <div class="msg-avatar"><i class="bi bi-robot"></i></div>
-        <div class="msg-bubble">
-          Assalam-o-Alaikum! Main Farman Kisan Hub ka AI Assistant hoon. 🌾<br>
-          Fasal, keeron, mosam ya zameen ke baare mein kuch bhi poochein — ya mic 🎤 dabaa kar bol kar poochein!
+            <!-- Chat History -->
+            <div class="px-4 py-2 text-xs uppercase tracking-wider text-emerald-400 font-semibold">Chat History</div>
+            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+                <div class="p-2 hover:bg-emerald-800 rounded-lg text-sm text-emerald-100 cursor-pointer truncate">
+                    <i class="fa-regular fa-message mr-2"></i> Kheti baadi mashwara
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- User Profile & Login Section -->
+        <div class="p-4 bg-emerald-950 border-t border-emerald-800">
+            <div id="userProfile" class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <div class="bg-emerald-700 text-white rounded-full h-10 w-10 flex items-center justify-center font-bold shrink-0">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="truncate">
+                        <p id="userNameDisplay" class="text-sm font-semibold truncate">Guest User</p>
+                        <p id="userIdDisplay" class="text-xs text-emerald-400 truncate">ID: Not Logged In</p>
+                    </div>
+                </div>
+                <button id="authBtn" onclick="toggleAuthModal()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-medium">
+                    Login
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Window -->
+    <main class="flex-1 flex flex-col h-full bg-white">
+        <!-- Top Navigation -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div>
+                <h1 class="text-lg font-bold text-gray-800 flex items-center space-x-2">
+                    <span class="text-emerald-700">Kisan AI Assistant</span>
+                </h1>
+                <p class="text-xs text-gray-500">Aapka Zira'at aur Fasal Advisor</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-xs text-gray-600 font-medium">Active</span>
+            </div>
+        </header>
+
+        <!-- Messages Box -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50">
+            <!-- Default Bot Welcome -->
+            <div class="flex items-start space-x-3">
+                <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-robot text-sm"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 max-w-xl text-gray-800 text-sm">
+                    Assalam-o-Alaikum! Main Farman Kisan Hub AI Assistant hoon. Fasal, khad, zameen ya kisi bhi kheti baadi ke masle ke liye sawal pochein.
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Input Area -->
+        <div class="p-4 bg-white border-t border-gray-200">
+            <form id="chatForm" onsubmit="handleSendMessage(event)" class="flex items-center space-x-2 max-w-4xl mx-auto">
+                <div class="relative flex-1">
+                    <input type="text" id="userInput" placeholder="Apna sawal likhein..." required
+                        class="w-full pl-4 pr-12 py-3 bg-gray-100 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-sm">
+                    
+                    <!-- Voice Assistant Icon inside Input -->
+                    <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-emerald-600 p-1.5 transition" title="Voice Assistant">
+                        <i class="fa-solid fa-microphone text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Send Button -->
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl transition flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Login / Signup Modal -->
+    <div id="authModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Kisan Account Login</h3>
+            
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Naam (Name)</label>
+                    <input type="text" id="authName" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Mobile / Email</label>
+                    <input type="text" id="authEmail" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-medium transition">
+                    Login / Register
+                </button>
+            </form>
+        </div>
     </div>
 
-    <div class="input-area">
-      <div class="input-wrapper">
-        <button class="icon-btn" id="micBtn" title="Voice se poochein">
-          <i class="bi bi-mic"></i>
-        </button>
-        <input type="text" id="chatInput" placeholder="Apna sawal likhein ya bolein..." autocomplete="off" />
-        <button class="send-btn" id="sendBtn" title="Bhejein">
-          <i class="bi bi-send"></i>
-        </button>
-      </div>
-      <div class="input-hint">AI ghalatiyan kar sakta hai. Zaroori mashwaray kisi maahir se bhi lein.</div>
-    </div>
-  </div>
-  <style>
-  /* AI ke jawab mein line-breaks sahi dikhane ke liye */
-  .msg-bubble { white-space: pre-wrap; }
-</style>
+    <!-- Logic Script -->
+    <script>
+        let chatHistory = [];
+        let currentUser = JSON.parse(localStorage.getItem('kisan_user')) || null;
+        let isVoiceActive = false;
 
-<script>
-  // ================= STATE =================
-  let currentChatId = null;
-  let messages = [];
-  let isSending = false;
+        window.onload = function() {
+            updateUserUI();
+        };
 
-  const chatContainer = document.getElementById('chatContainer');
-  const chatInput = document.getElementById('chatInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const micBtn = document.getElementById('micBtn');
-  const historyList = document.getElementById('historyList');
-  const newChatBtn = document.getElementById('newChatBtn');
-  const topbarTitle = document.getElementById('topbarTitle');
-  const sidebar = document.getElementById('sidebar');
-  const sidebarOverlay = document.getElementById('sidebarOverlay');
-  const menuBtn = document.getElementById('menuBtn');
+        function updateUserUI() {
+            if (currentUser) {
+                document.getElementById('userNameDisplay').innerText = currentUser.name;
+                document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
+                document.getElementById('authBtn').innerText = 'Logout';
+                document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
+            } else {
+                document.getElementById('userNameDisplay').innerText = 'Guest User';
+                document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
+                document.getElementById('authBtn').innerText = 'Login';
+                document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
+            }
+        }
 
-  const API_URL = '/api/chat';
+        function toggleAuthModal() {
+            document.getElementById('authModal').classList.toggle('hidden');
+        }
 
-  // ================= STORAGE (localStorage) =================
-  function getAllChats() {
-    try { return JSON.parse(localStorage.getItem('kisan_chats') || '[]'); }
-    catch (e) { return []; }
-  }
-  function saveAllChats(chats) {
-    localStorage.setItem('kisan_chats', JSON.stringify(chats));
-  }
-  function generateId() {
-    return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-  }
-  function makeTitle(text) {
-    text = (text || 'Nayi Guftagu').trim();
-    return text.length > 32 ? text.slice(0, 32) + '…' : text;
-  }
-  function saveCurrentChat() {
-    if (!messages.length) return;
-    const chats = getAllChats();
-    let chat = chats.find(c => c.id === currentChatId);
-    if (!chat) {
-      chat = { id: currentChatId || generateId(), title: makeTitle(messages[0].content), messages: [], created: Date.now() };
-      currentChatId = chat.id;
-      chats.unshift(chat);
-    }
-    chat.messages = messages;
-    chat.updated = Date.now();
-    saveAllChats(chats);
-    renderHistory();
-  }
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('authName').value;
+            const email = document.getElementById('authEmail').value;
+            const userId = 'KISAN-' + Math.floor(100000 + Math.random() * 900000);
+            
+            currentUser = { name, email, id: userId };
+            localStorage.setItem('kisan_user', JSON.stringify(currentUser));
+            
+            updateUserUI();
+            toggleAuthModal();
+        }
 
-  // ================= HISTORY SIDEBAR =================
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
+        function logoutUser() {
+            localStorage.removeItem('kisan_user');
+            currentUser = null;
+            updateUserUI();
+        }
 
-  function renderHistory() {
-    const chats = getAllChats();
-    historyList.innerHTML = '';
-    if (!chats.length) {
-      historyList.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;text-align:center;">Abhi koi purani guftagu nahi</div>';
-      return;
-    }
-    chats.forEach(chat => {
-      const item = document.createElement('div');
-      item.className = 'history-item' + (chat.id === currentChatId ? ' active' : '');
-      item.innerHTML = '<i class="bi bi-chat-dots"></i><span>' + escapeHtml(chat.title) + '</span>' +
-                       '<button class="del-chat" title="Delete"><i class="bi bi-trash"></i></button>';
-      item.addEventListener('click', (e) => {
-        if (e.target.closest('.del-chat')) { deleteChat(chat.id); return; }
-        loadChat(chat.id);
-      });
-      historyList.appendChild(item);
-    });
-  }
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            const inputField = document.getElementById('userInput');
+            const messageText = inputField.value.trim();
+            if (!messageText) return;
 
-  function deleteChat(id) {
-    let chats = getAllChats();
-    chats = chats.filter(c => c.id !== id);
-    saveAllChats(chats);
-    if (id === currentChatId) startNewChat();
-    else renderHistory();
-  }
+            appendMessage(messageText, 'user');
+            inputField.value = '';
 
-  function loadChat(id) {
-    const chat = getAllChats().find(c => c.id === id);
-    if (!chat) return;
-    currentChatId = chat.id;
-    messages = chat.messages || [];
-    renderMessages();
-    topbarTitle.textContent = chat.title;
-    closeSidebarMobile();
-    renderHistory();
-  }
+            chatHistory.push({ role: 'user', content: messageText });
 
-  function startNewChat() {
-    currentChatId = null;
-    messages = [];
-    chatContainer.innerHTML =
-      '<div class="msg-row ai">' +
-        '<div class="msg-avatar"><i class="bi bi-robot"></i></div>' +
-        '<div class="msg-bubble">Assalam-o-Alaikum! Main Farman Kisan Hub ka AI Assistant hoon. 🌾<br>Fasal, keeron, mosam ya zameen ke baare mein kuch bhi poochein — ya mic 🎤 dabaa kar bol kar poochein!</div>' +
-      '</div>';
-    topbarTitle.textContent = 'Nayi Guftagu';
-    closeSidebarMobile();
-    renderHistory();
-  }
+            const loadingId = showLoadingIndicator();
 
-  function renderMessages() {
-    chatContainer.innerHTML = '';
-    messages.forEach(m => appendMessage(m.role, m.content, false));
-    scrollBottom();
-  }
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatHistory, isCall: isVoiceActive })
+                });
 
-  // ================= MESSAGE UI =================
-  function appendMessage(role, content, doScroll = true) {
-    const row = document.createElement('div');
-    row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
-    const avatarIcon = role === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
-    row.innerHTML =
-      '<div class="msg-avatar">' + avatarIcon + '</div>' +
-      '<div class="msg-bubble">' + escapeHtml(content) + '</div>';
-    chatContainer.appendChild(row);
-    if (doScroll) scrollBottom();
-    return row;
-  }
+                const data = await response.json();
+                removeLoadingIndicator(loadingId);
 
-  function showTyping() {
-    const row = document.createElement('div');
-    row.className = 'msg-row ai';
-    row.id = 'typingRow';
-    row.innerHTML =
-      '<div class="msg-avatar"><i class="bi bi-robot"></i></div>' +
-      '<div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
-    chatContainer.appendChild(row);
-    scrollBottom();
-  }
-  function hideTyping() {
-    const t = document.getElementById('typingRow');
-    if (t) t.remove();
-  }
-  function scrollBottom() {
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-  }
+                const botReply = data.reply || "Maazrat, jawab hasil nahi ho saka.";
+                appendMessage(botReply, 'assistant');
+                chatHistory.push({ role: 'assistant', content: botReply });
 
-  // ================= SEND =================
-  async function sendMessage() {
-    const text = chatInput.value.trim();
-    if (!text || isSending) return;
+            } catch (err) {
+                removeLoadingIndicator(loadingId);
+                appendMessage("Server Error. Koshish karein ke backend `/api/chat` active ho.", 'assistant');
+            }
+        }
 
-    isSending = true;
-    sendBtn.disabled = true;
+        function appendMessage(text, sender) {
+            const container = document.getElementById('chatMessages');
+            const isUser = sender === 'user';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start space-x-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            
+            messageDiv.innerHTML = `
+                <div class="${isUser ? 'bg-emerald-800' : 'bg-emerald-600'} text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'} text-sm"></i>
+                </div>
+                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-white text-gray-800 border border-gray-200'} p-4 rounded-2xl shadow-sm max-w-xl text-sm">
+                    <p>${text}</p>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
 
-    messages.push({ role: 'user', content: text });
-    appendMessage('user', text);
-    if (!currentChatId) currentChatId = generateId();
-    saveCurrentChat();
-    chatInput.value = '';
-    showTyping();
+        function showLoadingIndicator() {
+            const container = document.getElementById('chatMessages');
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex items-start space-x-3';
+            div.innerHTML = `
+                <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-robot text-sm"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 text-gray-500 text-sm italic">
+                    Jawab soch raha hai...
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
 
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messages })
-      });
-      const data = await res.json();
-      hideTyping();
-      const reply = data.reply || 'Maazrat, jawab nahi mil saka. Dobara koshish karein.';
-      messages.push({ role: 'assistant', content: reply });
-      appendMessage('assistant', reply);
-      saveCurrentChat();
-    } catch (err) {
-      hideTyping();
-      appendMessage('assistant', 'Network error: ' + err.message);
-    }
+        function removeLoadingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
 
-    isSending = false;
-    sendBtn.disabled = false;
-    chatInput.focus();
-  }
+        function toggleVoiceInput() {
+            isVoiceActive = !isVoiceActive;
+            const btn = document.getElementById('voiceBtn');
+            if (isVoiceActive) {
+                btn.classList.add('text-emerald-600', 'animate-pulse');
+            } else {
+                btn.classList.remove('text-emerald-600', 'animate-pulse');
+            }
+        }
 
-  // ================= VOICE INPUT (Web Speech API) =================
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
-  let listening = false;
-
-  if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'ur-PK';
-    recognition.interimResults = true;
-    recognition.continuous = false;
-
-    recognition.onstart = () => {
-      listening = true;
-      micBtn.classList.add('mic-listening');
-      chatInput.placeholder = 'Sun raha hoon... boliye...';
-    };
-
-    recognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      chatInput.value = transcript;
-      const last = event.results[event.results.length - 1];
-      if (last.isFinal) {
-        setTimeout(() => sendMessage(), 300);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      listening = false;
-      micBtn.classList.remove('mic-listening');
-      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
-      if (event.error === 'not-allowed') {
-        alert('Mic ki ijazat (permission) dein taake voice input kaam kare.');
-      }
-    };
-
-    recognition.onend = () => {
-      listening = false;
-      micBtn.classList.remove('mic-listening');
-      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
-    };
-  }
-
-  micBtn.addEventListener('click', () => {
-    if (!recognition) {
-      alert('Aapka browser voice input support nahi karta. Chrome ya Edge istemal karein.');
-      return;
-    }
-    if (listening) {
-      recognition.stop();
-    } else {
-      try { recognition.start(); } catch (e) {}
-    }
-  });
-
-  // ================= SIDEBAR (Mobile) =================
-  function openSidebarMobile() {
-    sidebar.classList.add('open');
-    sidebarOverlay.classList.add('show');
-  }
-  function closeSidebarMobile() {
-    sidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('show');
-  }
-  menuBtn.addEventListener('click', openSidebarMobile);
-  sidebarOverlay.addEventListener('click', closeSidebarMobile);
-
-  // ================= LOGIN/SIGNUP (Placeholder) =================
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    alert('Login system yahan connect hoga (Firebase/Auth).');
-  });
-  document.getElementById('signupBtn').addEventListener('click', () => {
-    alert('Signup system yahan connect hoga (Firebase/Auth).');
-  });
-
-  // ================= EVENTS =================
-  sendBtn.addEventListener('click', sendMessage);
-  chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-  newChatBtn.addEventListener('click', startNewChat);
-
-  // ================= INIT =================
-  renderHistory();
-</script>
-
+        function startNewChat() {
+            chatHistory = [];
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 max-w-xl text-gray-800 text-sm">
+                        Nayi guftagu shuru ho chuki hai. Fasal se mutaliq sawal pochin!
+                    </div>
+                </div>
+            `;
+        }
+    </script>
 </body>
 </html>
