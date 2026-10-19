@@ -107,7 +107,7 @@
         </header>
 
         <!-- Chat Container -->
-        <div id="chatContainer" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar max-w-4xl mx-auto w-full pb-36 md:pb-32">
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-6 custom-scrollbar max-w-4xl mx-auto w-full pb-36 md:pb-32">
             
             <!-- Default Landing Screen -->
             <div id="welcomeScreen" class="min-h-full flex flex-col items-center justify-center text-center py-6 px-2">
@@ -144,14 +144,23 @@
             </div>
 
             <!-- Messages Area -->
-            <div id="chatMessages" class="space-y-4 hidden"></div>
+            <div id="chatMessages" class="space-y-6 hidden"></div>
         </div>
 
         <!-- Floating Fixed Bottom Input Bar -->
         <div class="fixed bottom-0 left-0 md:left-72 right-0 p-3 bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 z-20">
             <div class="max-w-4xl mx-auto">
                 
-                <!-- Image Attachment Preview Box -->
+                <!-- Voice Listening Status Bar -->
+                <div id="voiceStatusBox" class="hidden mb-2 p-2 bg-emerald-950/80 border border-emerald-500/40 rounded-xl flex items-center justify-between w-full">
+                    <div class="flex items-center space-x-2 text-xs text-emerald-300">
+                        <span class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
+                        <span id="voiceStatusText" class="font-medium">Listening... Speak now</span>
+                    </div>
+                    <button onclick="stopVoiceRecording()" class="text-xs bg-rose-600/80 hover:bg-rose-600 text-white px-2 py-0.5 rounded-lg transition">Stop</button>
+                </div>
+
+                <!-- Image Preview Box -->
                 <div id="imagePreviewBox" class="hidden mb-2 p-2 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between w-fit max-w-xs">
                     <div class="flex items-center space-x-2 truncate">
                         <i class="fa-solid fa-file-image text-emerald-400 text-sm"></i>
@@ -164,7 +173,7 @@
 
                 <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
 
-                <!-- Floating Input Capsule -->
+                <!-- Input Capsule -->
                 <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center bg-slate-950 border border-slate-800 rounded-3xl px-3 py-1.5 focus-within:border-emerald-500/50 shadow-xl">
                     
                     <button type="button" onclick="triggerImageUpload()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition shrink-0 mr-1.5" title="Upload Image/File">
@@ -175,12 +184,8 @@
                         class="w-full bg-transparent border-none focus:outline-none text-xs md:text-sm text-slate-200 placeholder-slate-500 py-2 px-1">
 
                     <div class="flex items-center space-x-1.5 ml-1 shrink-0">
-                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Input">
-                            <i class="fa-solid fa-microphone text-sm"></i>
-                        </button>
-
-                        <button type="button" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition" title="Voice Assistant Mode">
-                            <i class="fa-solid fa-waveform text-sm animate-pulse"></i>
+                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Recording">
+                            <i id="micIcon" class="fa-solid fa-microphone text-sm"></i>
                         </button>
 
                         <button type="submit" id="sendBtn" class="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition shadow-md">
@@ -244,12 +249,71 @@
         let authMode = 'signin';
         let isVoiceActive = false;
         let selectedImageData = null;
+        let recognition = null;
 
-        // Auto-Detect & Load User Session on Startup
         document.addEventListener("DOMContentLoaded", function() {
             checkStoredUser();
             renderHistoryList();
+            initSpeechRecognition();
         });
+
+        // Initialize Speech Recognition API
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'ur-PK'; // Supports Urdu & English mix
+
+                recognition.onstart = function() {
+                    isVoiceActive = true;
+                    document.getElementById('voiceStatusBox').classList.remove('hidden');
+                    document.getElementById('micIcon').classList.add('text-rose-500', 'animate-pulse');
+                };
+
+                recognition.onresult = function(event) {
+                    let transcript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
+                    }
+                    document.getElementById('userInput').value = transcript;
+                };
+
+                recognition.onerror = function(event) {
+                    console.error("Speech Error: ", event.error);
+                    stopVoiceRecording();
+                };
+
+                recognition.onend = function() {
+                    stopVoiceRecording();
+                };
+            }
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert("Speech recognition is not supported in this browser. Please use Chrome/Edge.");
+                return;
+            }
+
+            if (isVoiceActive) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    recognition.stop();
+                }
+            }
+        }
+
+        function stopVoiceRecording() {
+            isVoiceActive = false;
+            if (recognition) recognition.stop();
+            document.getElementById('voiceStatusBox').classList.add('hidden');
+            document.getElementById('micIcon').classList.remove('text-rose-500', 'animate-pulse');
+        }
 
         function checkStoredUser() {
             const savedUser = localStorage.getItem('fkh_user');
@@ -364,9 +428,7 @@
             e.preventDefault();
             const email = document.getElementById('authEmail').value;
             const name = document.getElementById('authName').value || email.split('@')[0];
-            
-            // Check if user ID already exists, otherwise create new
-            let userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
+            const userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
             
             currentUser = { name, email, id: userId };
             localStorage.setItem('fkh_user', JSON.stringify(currentUser));
@@ -438,7 +500,7 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: session.messages, isCall: isVoiceActive })
+                    body: JSON.stringify({ messages: session.messages })
                 });
 
                 const data = await response.json();
@@ -475,9 +537,9 @@
                 <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs font-semibold">
                     <i class="fa-solid ${isUser ? 'fa-user' : 'fa-leaf text-emerald-400'} text-[11px]"></i>
                 </div>
-                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-3 rounded-2xl shadow-sm max-w-[85%] sm:max-w-xl text-xs leading-relaxed">
+                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-3.5 rounded-2xl shadow-sm w-full text-xs leading-relaxed overflow-x-auto">
                     ${imgHTML}
-                    <p class="whitespace-pre-wrap">${text}</p>
+                    <div class="whitespace-pre-wrap font-normal">${text}</div>
                 </div>
             `;
             
@@ -574,16 +636,6 @@
             document.getElementById('chatMessages').classList.add('hidden');
             document.getElementById('welcomeScreen').classList.remove('hidden');
             renderHistoryList();
-        }
-
-        function toggleVoiceInput() {
-            isVoiceActive = !isVoiceActive;
-            const btn = document.getElementById('voiceBtn');
-            if (isVoiceActive) {
-                btn.classList.add('text-emerald-400', 'animate-pulse');
-            } else {
-                btn.classList.remove('text-emerald-400', 'animate-pulse');
-            }
         }
     </script>
 </body>
