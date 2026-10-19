@@ -1,12 +1,12 @@
 module.exports = async function handler(req, res) {
-  res.setHeader("Content-Type", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") {
-    return res.status(200).json({ reply: "Invalid request method." });
+    res.status(200);
+    return res.send("Invalid request method.");
   }
 
   try {
@@ -14,14 +14,14 @@ module.exports = async function handler(req, res) {
     const messages = body?.messages;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(200).json({ reply: "Request format error." });
+      res.status(200);
+      return res.send("Request format error.");
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({
-        reply: "Configuration Error: GEMINI_API_KEY missing in Vercel.",
-      });
+      res.status(200);
+      return res.send("Configuration Error: GEMINI_API_KEY missing in Vercel.");
     }
 
     const systemInstruction = {
@@ -37,24 +37,28 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
+    // Fast models — thinking OFF (2.5 family thinkingBudget 0 support karti hai)
     const modelsToTry = [
-      "gemini-3.8-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-flash-lite-latest",
       "gemini-flash-latest",
     ];
 
-    let replyText = null;
-    let rawErrorDetails = "";
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache");
+    res.status(200);
+    if (res.flushHeaders) res.flushHeaders();
+
+    let streamed = false;
 
     for (const model of modelsToTry) {
+      if (streamed) break;
       try {
         const url =
           "https://generativelanguage.googleapis.com/v1beta/models/" +
           model +
-          ":generateContent?key=" +
+          ":streamGenerateContent?alt=sse&key=" +
           apiKey;
 
         const response = await fetch(url, {
@@ -63,39 +67,53 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({
             systemInstruction: systemInstruction,
             contents: formattedContents,
+            generationConfig: {
+              maxOutputTokens: 500,
+              temperature: 0.4,
+              thinkingConfig: { thinkingBudget: 0 },
+            },
           }),
         });
 
-        const data = await response.json();
+        if (!response.ok || !response.body) continue;
 
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
-          break;
-        } else if (data?.error?.message) {
-          rawErrorDetails = data.error.message;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          sseBuffer += decoder.decode(value, { stream: true });
+
+          const lines = sseBuffer.split("\n");
+          sseBuffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const jsonStr = trimmed.slice(5).trim();
+            if (!jsonStr) continue;
+            try {
+              const data = JSON.parse(jsonStr);
+              const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                res.write(text.replace(/\*\*/g, "").replace(/\*/g, "").replace(/#/g, ""));
+                streamed = true;
+              }
+            } catch (e) { /* partial chunk */ }
+          }
         }
       } catch (err) {
-        rawErrorDetails = err.message;
+        /* agla model try karo */
       }
     }
 
-    if (replyText) {
-      const cleanReply = replyText
-        .replace(/Role:.*?Final Result:/gs, "")
-        .replace(/\*\*/g, "")
-        .replace(/\*/g, "")
-        .replace(/#/g, "")
-        .trim();
-
-      return res.status(200).json({ reply: cleanReply });
+    if (!streamed) {
+      res.write("Maazrat, server busy hai. Dobara koshish karein.");
     }
-
-    return res.status(200).json({
-      reply: rawErrorDetails
-        ? "API Error: " + rawErrorDetails
-        : "Server busy. Please try again.",
-    });
+    res.end();
   } catch (err) {
-    return res.status(200).json({ reply: "Server exception error: " + err.message });
+    res.end("Server exception error: " + err.message);
   }
 };
