@@ -12,8 +12,7 @@
         body { font-family: 'Inter', sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen flex flex-col md:flex-row overflow-hidden antialiased">
@@ -21,19 +20,24 @@
     <!-- Sidebar: Chat History & User Profile -->
     <aside class="w-full md:w-72 bg-slate-950 flex flex-col justify-between border-r border-slate-800 shrink-0">
         <div>
-            <!-- Brand Header -->
+            <!-- Brand Header & Agriculture Logo -->
             <div class="p-4 border-b border-slate-800 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                        <i class="fa-solid fa-leaf text-base"></i>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-500/5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
                     </div>
-                    <span class="font-semibold text-sm tracking-wide text-slate-200">Farman Kisan AI</span>
+                    <div>
+                        <span class="font-bold text-sm tracking-wide text-slate-100 block">Farman Kisan Hub</span>
+                        <span class="text-[10px] text-emerald-400 font-medium tracking-wider">AI AGRICULTURE</span>
+                    </div>
                 </div>
             </div>
 
             <!-- New Chat Button -->
             <div class="p-3">
-                <button onclick="startNewChat()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-medium py-2.5 px-3 rounded-lg flex items-center justify-between transition duration-200">
+                <button onclick="startNewChat()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-medium py-2.5 px-3 rounded-xl flex items-center justify-between transition duration-200 shadow-sm">
                     <span class="flex items-center space-x-2">
                         <i class="fa-solid fa-plus text-emerald-400"></i>
                         <span>New Chat</span>
@@ -42,31 +46,31 @@
                 </button>
             </div>
 
-            <!-- Recent Chats Header -->
-            <div class="px-4 pt-3 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Recent Conversations</div>
+            <!-- History Section -->
+            <div class="px-4 pt-3 pb-1 flex items-center justify-between">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Saved Chats</span>
+                <span id="historyCount" class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">0</span>
+            </div>
             
-            <!-- Chat History List -->
-            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
-                <div class="p-2 hover:bg-slate-900/80 rounded-lg text-xs text-slate-400 hover:text-slate-200 cursor-pointer transition flex items-center space-x-2 truncate border border-transparent hover:border-slate-800">
-                    <i class="fa-regular fa-message text-slate-500"></i>
-                    <span class="truncate">Crop Disease Diagnosis</span>
-                </div>
+            <!-- Chat History Sessions List -->
+            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-290px)] custom-scrollbar">
+                <!-- Dynamically populated history -->
             </div>
         </div>
 
-        <!-- User Profile & Auth Section -->
-        <div class="p-3 bg-slate-950/80 border-t border-slate-800">
+        <!-- User Profile & Auth Status -->
+        <div class="p-3 bg-slate-950/90 border-t border-slate-800">
             <div id="userProfile" class="flex items-center justify-between">
                 <div class="flex items-center space-x-3 overflow-hidden">
-                    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg h-9 w-9 flex items-center justify-center font-semibold text-xs shrink-0">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl h-9 w-9 flex items-center justify-center font-semibold text-xs shrink-0">
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <div class="truncate">
-                        <p id="userNameDisplay" class="text-xs font-medium text-slate-200 truncate">Guest User</p>
+                        <p id="userNameDisplay" class="text-xs font-semibold text-slate-200 truncate">Guest User</p>
                         <p id="userIdDisplay" class="text-[10px] text-slate-500 truncate">ID: Not Logged In</p>
                     </div>
                 </div>
-                <button id="authBtn" onclick="toggleAuthModal()" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-md transition font-medium">
+                <button id="authBtn" onclick="toggleAuthModal()" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition font-medium">
                     Sign In
                 </button>
             </div>
@@ -76,49 +80,56 @@
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col h-full bg-slate-900">
         
-        <!-- Top Navbar -->
-        <header class="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
+        <!-- Top Header -->
+        <header class="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/60 backdrop-blur-md">
             <div class="flex items-center space-x-3">
                 <span class="text-xs font-medium text-slate-400">Model:</span>
                 <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5">
-                    <i class="fa-solid fa-bolt text-[10px]"></i> Gemini Enterprise Pro
+                    <i class="fa-solid fa-bolt text-[10px]"></i> Farman Kisan Engine Pro
                 </span>
             </div>
-            <div class="flex items-center space-x-2">
-                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                <span class="text-xs text-slate-400 font-medium">System Active</span>
+            <div class="flex items-center space-x-3">
+                <!-- Guest Limit Banner -->
+                <div id="guestLimitBadge" class="text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-md flex items-center space-x-1.5">
+                    <i class="fa-solid fa-shield-halved text-xs"></i>
+                    <span id="guestCountText">5 Free Messages Left</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="text-xs text-slate-400 font-medium">Online</span>
+                </div>
             </div>
         </header>
 
-        <!-- Chat Container -->
+        <!-- Chat Messages Container -->
         <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar max-w-4xl mx-auto w-full">
             
-            <!-- Default Landing Screen (ChatGPT Style - No Automatic Bot Welcome Message) -->
+            <!-- Default Clean Landing Screen -->
             <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center py-12 px-4">
-                <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-6 shadow-lg shadow-emerald-500/5">
-                    <i class="fa-solid fa-seedling text-2xl"></i>
+                <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 mb-6 shadow-xl shadow-emerald-500/5">
+                    <i class="fa-solid fa-leaf text-3xl"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-slate-100 mb-2">How can I assist your agricultural query today?</h2>
-                <p class="text-xs text-slate-400 max-w-md mb-8">Ask about crop management, soil health, fertilizers, pest control, or weather-based advisories.</p>
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Farman Kisan Hub AI</h2>
+                <p class="text-xs text-slate-400 max-w-md mb-8">Ask any agronomic questions regarding crops, soil health, fertilizer ratios, or disease management.</p>
 
-                <!-- Suggestion Chips -->
+                <!-- Prompt Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-left">
-                    <button onclick="usePrompt('What are the best management techniques for wheat crops?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
-                        <div class="font-medium text-slate-200 mb-0.5 group-hover:text-emerald-400">Wheat Management</div>
-                        <div class="text-[11px] text-slate-500 truncate">Best practices for optimal yield</div>
+                    <button onclick="usePrompt('What is the ideal fertilizer schedule for wheat?')" class="p-3.5 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
+                        <div class="font-semibold text-slate-200 mb-0.5 group-hover:text-emerald-400">Wheat Fertilizer Advisory</div>
+                        <div class="text-[11px] text-slate-500 truncate">Schedule for NPK application</div>
                     </button>
-                    <button onclick="usePrompt('How to treat nitrogen deficiency in corn soil?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
-                        <div class="font-medium text-slate-200 mb-0.5 group-hover:text-emerald-400">Soil Health Analysis</div>
-                        <div class="text-[11px] text-slate-500 truncate">Treating nitrogen deficiencies</div>
+                    <button onclick="usePrompt('How to treat yellow rust in crops?')" class="p-3.5 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
+                        <div class="font-semibold text-slate-200 mb-0.5 group-hover:text-emerald-400">Pest & Fungus Control</div>
+                        <div class="text-[11px] text-slate-500 truncate">Fungicide and treatment guidelines</div>
                     </button>
                 </div>
             </div>
 
-            <!-- Messages Area (Populated dynamically) -->
+            <!-- Messages Area -->
             <div id="chatMessages" class="space-y-6 hidden"></div>
         </div>
 
-        <!-- Input Area -->
+        <!-- Input Section -->
         <div class="p-4 bg-slate-900 border-t border-slate-800/80">
             <div class="max-w-4xl mx-auto">
                 <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center">
@@ -126,68 +137,99 @@
                         class="w-full pl-4 pr-24 py-3.5 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 text-sm text-slate-200 placeholder-slate-500 transition shadow-inner">
                     
                     <div class="absolute right-3 flex items-center space-x-1.5">
-                        <!-- Voice Mic Button -->
                         <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="p-2 text-slate-400 hover:text-emerald-400 rounded-xl hover:bg-slate-800/60 transition" title="Voice Mode">
                             <i class="fa-solid fa-microphone text-base"></i>
                         </button>
-
-                        <!-- Send Button -->
-                        <button type="submit" class="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition flex items-center justify-center shadow-md">
+                        <button type="submit" id="sendBtn" class="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition flex items-center justify-center shadow-md">
                             <i class="fa-solid fa-arrow-up text-sm"></i>
                         </button>
                     </div>
                 </form>
-                <p class="text-[10px] text-slate-500 text-center mt-2">Farman Kisan AI provides expert advice. Verify critical agronomic decisions with local experts.</p>
+                <p class="text-[10px] text-slate-500 text-center mt-2">Farman Kisan Hub AI provides automated advisory. Verify critical decisions with experts.</p>
             </div>
         </div>
     </main>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <!-- Authentication Modal (Sign In / Sign Up) -->
+    <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
             <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
-            <h3 class="text-lg font-bold text-slate-100 mb-1">Farman Kisan Portal</h3>
-            <p class="text-xs text-slate-400 mb-5">Sign in to sync your conversation history across devices.</p>
             
-            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                    <input type="text" id="authName" required placeholder="e.g. Farman Ali" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+            <div class="flex items-center space-x-2 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-leaf text-sm"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-100">Farman Kisan Portal</h3>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
+                <button id="tabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition">Sign In</button>
+                <button id="tabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition">Sign Up</button>
+            </div>
+
+            <p id="authNoticeText" class="text-xs text-slate-400 mb-4">Sign in to unlock unlimited AI chats and save history.</p>
+            
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-3.5">
+                <div id="nameField" class="hidden">
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                    <input type="text" id="authName" placeholder="Farman Ali" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Email / Phone</label>
-                    <input type="text" id="authEmail" required placeholder="farman@example.com" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Gmail / Email</label>
+                    <input type="email" id="authEmail" required placeholder="kisan@gmail.com" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-xs font-semibold transition shadow-lg shadow-emerald-600/20">
-                    Sign In / Create ID
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-semibold transition shadow-lg shadow-emerald-600/20 mt-2">
+                    Sign In
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Script Section -->
+    <!-- Application Script -->
     <script>
-        let chatHistory = [];
-        let currentUser = JSON.parse(localStorage.getItem('kisan_user')) || null;
+        let currentSessionId = null;
+        let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('fkh_user')) || null;
+        let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
+        const MAX_GUEST_LIMIT = 5;
+        let authMode = 'signin';
         let isVoiceActive = false;
 
         window.onload = function() {
             updateUserUI();
+            renderHistoryList();
         };
 
         function updateUserUI() {
+            const guestBadge = document.getElementById('guestLimitBadge');
+            const guestText = document.getElementById('guestCountText');
+
             if (currentUser) {
-                document.getElementById('userNameDisplay').innerText = currentUser.name;
+                document.getElementById('userNameDisplay').innerText = currentUser.name || currentUser.email.split('@')[0];
                 document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
                 document.getElementById('authBtn').innerText = 'Sign Out';
                 document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
+                
+                // Hide Guest Limit Badge when logged in
+                guestBadge.classList.add('hidden');
             } else {
                 document.getElementById('userNameDisplay').innerText = 'Guest User';
                 document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
                 document.getElementById('authBtn').innerText = 'Sign In';
                 document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
+                
+                // Show Guest Limit Badge
+                guestBadge.classList.remove('hidden');
+                const remaining = Math.max(0, MAX_GUEST_LIMIT - guestMessageCount);
+                guestText.innerText = `${remaining} Free Messages Left`;
             }
         }
 
@@ -195,23 +237,50 @@
             document.getElementById('authModal').classList.toggle('hidden');
         }
 
+        function switchAuthTab(mode) {
+            authMode = mode;
+            const tabSignIn = document.getElementById('tabSignIn');
+            const tabSignUp = document.getElementById('tabSignUp');
+            const nameField = document.getElementById('nameField');
+            const submitBtn = document.getElementById('authSubmitBtn');
+
+            if (mode === 'signup') {
+                tabSignUp.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
+                tabSignIn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
+                nameField.classList.remove('hidden');
+                submitBtn.innerText = "Create Account";
+            } else {
+                tabSignIn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
+                tabSignUp.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
+                nameField.classList.add('hidden');
+                submitBtn.innerText = "Sign In";
+            }
+        }
+
         function handleAuthSubmit(e) {
             e.preventDefault();
-            const name = document.getElementById('authName').value;
             const email = document.getElementById('authEmail').value;
-            const userId = 'KISAN-' + Math.floor(100000 + Math.random() * 900000);
+            const password = document.getElementById('authPassword').value;
+            const name = document.getElementById('authName').value || email.split('@')[0];
             
+            const userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
             currentUser = { name, email, id: userId };
-            localStorage.setItem('kisan_user', JSON.stringify(currentUser));
+            
+            localStorage.setItem('fkh_user', JSON.stringify(currentUser));
             
             updateUserUI();
             toggleAuthModal();
+            
+            // Re-enable chat input if blocked
+            document.getElementById('userInput').disabled = false;
+            document.getElementById('userInput').placeholder = "Ask anything about agriculture, crops, or soil...";
         }
 
         function logoutUser() {
-            localStorage.removeItem('kisan_user');
+            localStorage.removeItem('fkh_user');
             currentUser = null;
             updateUserUI();
+            startNewChat();
         }
 
         function usePrompt(text) {
@@ -221,11 +290,25 @@
 
         async function handleSendMessage(e) {
             e.preventDefault();
+
+            // Check Guest Limit
+            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
+                alert("Aapki 5 free chats poori ho chuki hain. Mazeed chat karne ke liye pehle Sign In ya Sign Up karein.");
+                toggleAuthModal();
+                return;
+            }
+
             const inputField = document.getElementById('userInput');
             const messageText = inputField.value.trim();
             if (!messageText) return;
 
-            // Hide Welcome Screen on first query
+            // Increment guest message counter
+            if (!currentUser) {
+                guestMessageCount++;
+                localStorage.setItem('fkh_guest_count', guestMessageCount.toString());
+                updateUserUI();
+            }
+
             document.getElementById('welcomeScreen').classList.add('hidden');
             const messagesContainer = document.getElementById('chatMessages');
             messagesContainer.classList.remove('hidden');
@@ -233,7 +316,21 @@
             appendMessage(messageText, 'user');
             inputField.value = '';
 
-            chatHistory.push({ role: 'user', content: messageText });
+            // Handle Chat Session Creation
+            if (!currentSessionId) {
+                currentSessionId = 'session_' + Date.now();
+                const newSession = {
+                    id: currentSessionId,
+                    title: messageText.length > 28 ? messageText.substring(0, 28) + '...' : messageText,
+                    timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    messages: []
+                };
+                allSessions.unshift(newSession);
+            }
+
+            const session = allSessions.find(s => s.id === currentSessionId);
+            session.messages.push({ role: 'user', content: messageText });
+            saveSessions();
 
             const loadingId = showLoadingIndicator();
 
@@ -241,7 +338,7 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: chatHistory, isCall: isVoiceActive })
+                    body: JSON.stringify({ messages: session.messages, isCall: isVoiceActive })
                 });
 
                 const data = await response.json();
@@ -249,11 +346,22 @@
 
                 const botReply = data.reply || "An error occurred while generating response.";
                 appendMessage(botReply, 'assistant');
-                chatHistory.push({ role: 'assistant', content: botReply });
+                
+                session.messages.push({ role: 'assistant', content: botReply });
+                saveSessions();
 
             } catch (err) {
                 removeLoadingIndicator(loadingId);
-                appendMessage("Failed to connect to AI server. Please check backend configuration.", 'assistant');
+                appendMessage("Failed to connect to AI server. Please check backend API.", 'assistant');
+            }
+
+            // Lock input if Guest limit hit on this turn
+            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
+                inputField.disabled = true;
+                inputField.placeholder = "Free limit reached. Please Sign In / Sign Up to continue.";
+                setTimeout(() => {
+                    toggleAuthModal();
+                }, 1000);
             }
         }
 
@@ -266,7 +374,7 @@
             
             messageDiv.innerHTML = `
                 <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-8 w-8 flex items-center justify-center shrink-0 text-xs font-semibold">
-                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot text-emerald-400'}"></i>
+                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-leaf text-emerald-400'}"></i>
                 </div>
                 <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-4 rounded-2xl shadow-sm max-w-2xl text-xs leading-relaxed">
                     <p class="whitespace-pre-wrap">${text}</p>
@@ -286,11 +394,11 @@
             div.className = 'flex items-start space-x-3.5';
             div.innerHTML = `
                 <div class="bg-slate-800 border border-slate-700 text-emerald-400 rounded-xl h-8 w-8 flex items-center justify-center shrink-0 text-xs">
-                    <i class="fa-solid fa-robot"></i>
+                    <i class="fa-solid fa-leaf"></i>
                 </div>
                 <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-slate-400 text-xs italic flex items-center space-x-2">
                     <i class="fa-solid fa-circle-notch animate-spin text-emerald-400"></i>
-                    <span>Thinking...</span>
+                    <span>Analyzing Agronomic Data...</span>
                 </div>
             `;
             container.appendChild(div);
@@ -304,6 +412,70 @@
             if (el) el.remove();
         }
 
+        function saveSessions() {
+            localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('chatHistoryList');
+            document.getElementById('historyCount').innerText = allSessions.length;
+            container.innerHTML = '';
+
+            allSessions.forEach(session => {
+                const isActive = session.id === currentSessionId;
+                const div = document.createElement('div');
+                div.className = `p-2.5 rounded-xl text-xs cursor-pointer transition flex items-center justify-between group ${isActive ? 'bg-slate-800/90 text-slate-100 border border-slate-700' : 'text-slate-400 hover:bg-slate-900/80 hover:text-slate-200 border border-transparent'}`;
+                
+                div.onclick = () => loadSession(session.id);
+                div.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate">
+                        <i class="fa-regular fa-message text-slate-500"></i>
+                        <span class="truncate">${session.title}</span>
+                    </div>
+                    <button onclick="deleteSession(event, '${session.id}')" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 p-1 transition">
+                        <i class="fa-solid fa-trash-can text-[11px]"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function loadSession(id) {
+            currentSessionId = id;
+            const session = allSessions.find(s => s.id === id);
+            if (!session) return;
+
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            container.classList.remove('hidden');
+
+            session.messages.forEach(msg => {
+                appendMessage(msg.content, msg.role);
+            });
+
+            renderHistoryList();
+        }
+
+        function deleteSession(e, id) {
+            e.stopPropagation();
+            allSessions = allSessions.filter(s => s.id !== id);
+            if (currentSessionId === id) {
+                startNewChat();
+            } else {
+                saveSessions();
+            }
+        }
+
+        function startNewChat() {
+            currentSessionId = null;
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('chatMessages').classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+            renderHistoryList();
+        }
+
         function toggleVoiceInput() {
             isVoiceActive = !isVoiceActive;
             const btn = document.getElementById('voiceBtn');
@@ -312,13 +484,6 @@
             } else {
                 btn.classList.remove('text-emerald-400', 'animate-pulse');
             }
-        }
-
-        function startNewChat() {
-            chatHistory = [];
-            document.getElementById('chatMessages').innerHTML = '';
-            document.getElementById('chatMessages').classList.add('hidden');
-            document.getElementById('welcomeScreen').classList.remove('hidden');
         }
     </script>
 </body>
