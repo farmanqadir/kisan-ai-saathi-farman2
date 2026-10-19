@@ -23,7 +23,7 @@
     <!-- Sidebar (Collapsible Drawer on Mobile, Fixed on Desktop) -->
     <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-slate-950 flex flex-col justify-between border-r border-slate-800 shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
-            <!-- Header & Close Button for Mobile -->
+            <!-- Header & Close Button -->
             <div class="p-4 border-b border-slate-800 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -57,8 +57,7 @@
             </div>
             
             <!-- History List -->
-            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-270px)] custom-scrollbar">
-            </div>
+            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-270px)] custom-scrollbar"></div>
         </div>
 
         <!-- User Profile & Auth Status -->
@@ -83,23 +82,21 @@
     <!-- Main Content Workspace -->
     <main class="flex-1 flex flex-col h-full bg-slate-900 min-w-0">
         
-        <!-- Top Navigation Header -->
+        <!-- Top Header -->
         <header class="h-14 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between bg-slate-900/80 backdrop-blur-md shrink-0">
             <div class="flex items-center space-x-3">
-                <!-- Mobile Menu Button -->
                 <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-300 hover:text-white p-1.5 bg-slate-800/80 border border-slate-700 rounded-lg">
                     <i class="fa-solid fa-bars text-sm"></i>
                 </button>
                 <div class="flex items-center space-x-1.5">
-                    <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1">
-                        <i class="fa-solid fa-bolt text-[9px]"></i> <span class="hidden sm:inline">Farman</span> Engine Pro
+                    <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt text-[10px]"></i> <span>Engine Pro 3.5</span>
                     </span>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <!-- Guest Limit Badge -->
-                <div id="guestLimitBadge" class="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded flex items-center space-x-1">
+                <div id="guestLimitBadge" class="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-lg flex items-center space-x-1">
                     <i class="fa-solid fa-shield-halved text-[10px]"></i>
                     <span id="guestCountText">5 Free Left</span>
                 </div>
@@ -109,45 +106,91 @@
             </div>
         </header>
 
-        <!-- Chat Messages Scroll Area -->
-        <div id="chatContainer" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar max-w-4xl mx-auto w-full">
+        <!-- Chat Container -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar max-w-4xl mx-auto w-full pb-36 md:pb-32">
             
-            <!-- Default Landing Screen -->
-            <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center py-8 px-4">
+            <!-- Default Landing Screen (ChatGPT Style Layout) -->
+            <div id="welcomeScreen" class="min-h-full flex flex-col items-center justify-center text-center py-6 px-2">
                 <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 shadow-lg shadow-emerald-500/5">
                     <i class="fa-solid fa-leaf text-2xl"></i>
                 </div>
                 <h2 class="text-xl md:text-2xl font-bold text-slate-100 mb-1">Farman Kisan Hub AI</h2>
-                <p class="text-xs text-slate-400 max-w-md mb-6">Ask any agronomic questions regarding crops, soil health, or fertilizers.</p>
+                <p class="text-xs text-slate-400 max-w-md mb-8">Ask any agronomic questions regarding crops, soil health, or fertilizers.</p>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-lg text-left">
-                    <button onclick="usePrompt('What is the ideal fertilizer schedule for wheat?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
-                        <div class="font-semibold text-slate-200 mb-0.5 group-hover:text-emerald-400">Wheat Fertilizer Advisory</div>
-                        <div class="text-[10px] text-slate-500 truncate">Schedule for NPK application</div>
+                <!-- ChatGPT Style Menu Options -->
+                <div class="w-full max-w-md space-y-2 text-left mb-6">
+                    <button onclick="triggerImageUpload()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
+                        <i class="fa-regular fa-image text-emerald-400 text-base"></i>
+                        <div class="truncate">
+                            <span class="font-medium text-slate-200 block">Analyze crop image</span>
+                            <span class="text-[10px] text-slate-500">Upload plant or soil photo for diagnosis</span>
+                        </div>
                     </button>
-                    <button onclick="usePrompt('How to treat yellow rust in crops?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
-                        <div class="font-semibold text-slate-200 mb-0.5 group-hover:text-emerald-400">Pest & Fungus Control</div>
-                        <div class="text-[10px] text-slate-500 truncate">Fungicide & treatment guidelines</div>
+                    <button onclick="usePrompt('How to treat yellow rust in crops?')" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
+                        <i class="fa-solid fa-pen-to-square text-emerald-400 text-base"></i>
+                        <div class="truncate">
+                            <span class="font-medium text-slate-200 block">Disease & Pest Advisory</span>
+                            <span class="text-[10px] text-slate-500">Get instant fungicide and spray guidelines</span>
+                        </div>
+                    </button>
+                    <button onclick="usePrompt('What is the best fertilizer schedule for wheat?')" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
+                        <i class="fa-solid fa-globe text-emerald-400 text-base"></i>
+                        <div class="truncate">
+                            <span class="font-medium text-slate-200 block">Soil & NPK Ratios</span>
+                            <span class="text-[10px] text-slate-500">Search latest agronomic standards</span>
+                        </div>
                     </button>
                 </div>
             </div>
 
             <!-- Messages Area -->
-            <div id="chatMessages" class="space-y-4 hidden pb-4"></div>
+            <div id="chatMessages" class="space-y-4 hidden"></div>
         </div>
 
-        <!-- Fixed Bottom Input Bar -->
-        <div class="p-3 md:p-4 bg-slate-900 border-t border-slate-800/80 shrink-0">
+        <!-- Floating Fixed Bottom Input Bar (ChatGPT Style) -->
+        <div class="fixed bottom-0 left-0 md:left-72 right-0 p-3 bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 z-20">
             <div class="max-w-4xl mx-auto">
-                <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center">
-                    <input type="text" id="userInput" placeholder="Ask about agriculture..." required
-                        class="w-full pl-3.5 pr-20 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500/50 text-xs md:text-sm text-slate-200 placeholder-slate-500 transition shadow-inner">
+                
+                <!-- Image Attachment Preview Box -->
+                <div id="imagePreviewBox" class="hidden mb-2 p-2 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between w-fit max-w-xs">
+                    <div class="flex items-center space-x-2 truncate">
+                        <i class="fa-solid fa-file-image text-emerald-400 text-sm"></i>
+                        <span id="imagePreviewName" class="text-xs text-slate-300 truncate">crop_photo.jpg</span>
+                    </div>
+                    <button onclick="removeSelectedImage()" class="text-slate-500 hover:text-rose-400 ml-2 p-1">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Hidden Input for Files/Images -->
+                <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
+
+                <!-- Floating Input Capsule -->
+                <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center bg-slate-950 border border-slate-800 rounded-3xl px-3 py-1.5 focus-within:border-emerald-500/50 shadow-xl">
                     
-                    <div class="absolute right-2 flex items-center space-x-1">
-                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg transition" title="Voice Mode">
+                    <!-- Plus Button (+ Image/File Upload) -->
+                    <button type="button" onclick="triggerImageUpload()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition shrink-0 mr-1.5" title="Upload Image/File">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                    </button>
+
+                    <!-- Text Input Box -->
+                    <input type="text" id="userInput" placeholder="Ask Farman Kisan AI..." required
+                        class="w-full bg-transparent border-none focus:outline-none text-xs md:text-sm text-slate-200 placeholder-slate-500 py-2 px-1">
+
+                    <!-- Right Controls (Voice Mic & Voice Assistant Button) -->
+                    <div class="flex items-center space-x-1.5 ml-1 shrink-0">
+                        <!-- Mic Button -->
+                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Input">
                             <i class="fa-solid fa-microphone text-sm"></i>
                         </button>
-                        <button type="submit" id="sendBtn" class="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center justify-center shadow-md">
+
+                        <!-- ChatGPT Live Voice Mode Button -->
+                        <button type="button" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition" title="Voice Assistant Mode">
+                            <i class="fa-solid fa-waveform text-sm animate-pulse"></i>
+                        </button>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="sendBtn" class="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition shadow-md">
                             <i class="fa-solid fa-arrow-up text-xs"></i>
                         </button>
                     </div>
@@ -207,6 +250,7 @@
         const MAX_GUEST_LIMIT = 5;
         let authMode = 'signin';
         let isVoiceActive = false;
+        let selectedImageData = null;
 
         window.onload = function() {
             updateUserUI();
@@ -224,6 +268,32 @@
             if (window.innerWidth < 768) {
                 toggleMobileSidebar();
             }
+        }
+
+        function triggerImageUpload() {
+            document.getElementById('imageInput').click();
+        }
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('imagePreviewName').innerText = file.name;
+                document.getElementById('imagePreviewBox').classList.remove('hidden');
+                document.getElementById('imagePreviewBox').classList.add('flex');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImageData = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeSelectedImage() {
+            selectedImageData = null;
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreviewBox').classList.add('hidden');
+            document.getElementById('imagePreviewBox').classList.remove('flex');
         }
 
         function updateUserUI() {
@@ -284,7 +354,7 @@
             toggleAuthModal();
             
             document.getElementById('userInput').disabled = false;
-            document.getElementById('userInput').placeholder = "Ask about agriculture...";
+            document.getElementById('userInput').placeholder = "Ask Farman Kisan AI...";
         }
 
         function logoutUser() {
@@ -310,7 +380,7 @@
 
             const inputField = document.getElementById('userInput');
             const messageText = inputField.value.trim();
-            if (!messageText) return;
+            if (!messageText && !selectedImageData) return;
 
             if (!currentUser) {
                 guestMessageCount++;
@@ -322,14 +392,18 @@
             const messagesContainer = document.getElementById('chatMessages');
             messagesContainer.classList.remove('hidden');
 
-            appendMessage(messageText, 'user');
+            const contentToSend = messageText || "Analyzing attached file/image...";
+            appendMessage(contentToSend, 'user', selectedImageData);
             inputField.value = '';
+
+            const currentImage = selectedImageData;
+            removeSelectedImage();
 
             if (!currentSessionId) {
                 currentSessionId = 'session_' + Date.now();
                 const newSession = {
                     id: currentSessionId,
-                    title: messageText.length > 25 ? messageText.substring(0, 25) + '...' : messageText,
+                    title: contentToSend.length > 25 ? contentToSend.substring(0, 25) + '...' : contentToSend,
                     timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                     messages: []
                 };
@@ -337,7 +411,7 @@
             }
 
             const session = allSessions.find(s => s.id === currentSessionId);
-            session.messages.push({ role: 'user', content: messageText });
+            session.messages.push({ role: 'user', content: contentToSend });
             saveSessions();
 
             const loadingId = showLoadingIndicator();
@@ -370,18 +444,21 @@
             }
         }
 
-        function appendMessage(text, sender) {
+        function appendMessage(text, sender, imgData = null) {
             const container = document.getElementById('chatMessages');
             const isUser = sender === 'user';
             
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex items-start space-x-2.5 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
             
+            let imgHTML = imgData ? `<img src="${imgData}" class="max-w-xs rounded-xl mb-2 border border-slate-700">` : '';
+
             messageDiv.innerHTML = `
                 <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs font-semibold">
                     <i class="fa-solid ${isUser ? 'fa-user' : 'fa-leaf text-emerald-400'} text-[11px]"></i>
                 </div>
                 <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-3 rounded-2xl shadow-sm max-w-[85%] sm:max-w-xl text-xs leading-relaxed">
+                    ${imgHTML}
                     <p class="whitespace-pre-wrap">${text}</p>
                 </div>
             `;
