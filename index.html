@@ -1,137 +1,173 @@
 <!DOCTYPE html>
-<html lang="ur" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Farman Kisan Hub AI Assistant</title>
+    <title>Farman Kisan Hub AI</title>
     <!-- Tailwind CSS & FontAwesome Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+    </style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col md:flex-row overflow-hidden font-sans">
+<body class="bg-slate-900 text-slate-100 h-screen flex flex-col md:flex-row overflow-hidden antialiased">
 
-    <!-- Sidebar: History & Profile -->
-    <aside class="w-full md:w-80 bg-emerald-900 text-white flex flex-col justify-between border-r border-emerald-800 shadow-lg shrink-0">
+    <!-- Sidebar: Chat History & User Profile -->
+    <aside class="w-full md:w-72 bg-slate-950 flex flex-col justify-between border-r border-slate-800 shrink-0">
         <div>
-            <!-- Header -->
-            <div class="p-4 border-b border-emerald-800 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-seedling text-emerald-400 text-2xl"></i>
-                    <span class="font-bold text-lg">Farman Kisan Hub</span>
+            <!-- Brand Header -->
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-leaf text-base"></i>
+                    </div>
+                    <span class="font-semibold text-sm tracking-wide text-slate-200">Farman Kisan AI</span>
                 </div>
             </div>
 
             <!-- New Chat Button -->
-            <div class="p-4">
-                <button onclick="startNewChat()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition duration-200 shadow">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Nayi Guftagu (New Chat)</span>
+            <div class="p-3">
+                <button onclick="startNewChat()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-medium py-2.5 px-3 rounded-lg flex items-center justify-between transition duration-200">
+                    <span class="flex items-center space-x-2">
+                        <i class="fa-solid fa-plus text-emerald-400"></i>
+                        <span>New Chat</span>
+                    </span>
+                    <span class="text-[10px] text-slate-500 border border-slate-800 px-1.5 py-0.5 rounded">Ctrl K</span>
                 </button>
             </div>
 
-            <!-- Chat History -->
-            <div class="px-4 py-2 text-xs uppercase tracking-wider text-emerald-400 font-semibold">Chat History</div>
-            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-280px)]">
-                <div class="p-2 hover:bg-emerald-800 rounded-lg text-sm text-emerald-100 cursor-pointer truncate">
-                    <i class="fa-regular fa-message mr-2"></i> Kheti baadi mashwara
+            <!-- Recent Chats Header -->
+            <div class="px-4 pt-3 pb-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Recent Conversations</div>
+            
+            <!-- Chat History List -->
+            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
+                <div class="p-2 hover:bg-slate-900/80 rounded-lg text-xs text-slate-400 hover:text-slate-200 cursor-pointer transition flex items-center space-x-2 truncate border border-transparent hover:border-slate-800">
+                    <i class="fa-regular fa-message text-slate-500"></i>
+                    <span class="truncate">Crop Disease Diagnosis</span>
                 </div>
             </div>
         </div>
 
-        <!-- User Profile & Login Section -->
-        <div class="p-4 bg-emerald-950 border-t border-emerald-800">
+        <!-- User Profile & Auth Section -->
+        <div class="p-3 bg-slate-950/80 border-t border-slate-800">
             <div id="userProfile" class="flex items-center justify-between">
                 <div class="flex items-center space-x-3 overflow-hidden">
-                    <div class="bg-emerald-700 text-white rounded-full h-10 w-10 flex items-center justify-center font-bold shrink-0">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg h-9 w-9 flex items-center justify-center font-semibold text-xs shrink-0">
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <div class="truncate">
-                        <p id="userNameDisplay" class="text-sm font-semibold truncate">Guest User</p>
-                        <p id="userIdDisplay" class="text-xs text-emerald-400 truncate">ID: Not Logged In</p>
+                        <p id="userNameDisplay" class="text-xs font-medium text-slate-200 truncate">Guest User</p>
+                        <p id="userIdDisplay" class="text-[10px] text-slate-500 truncate">ID: Not Logged In</p>
                     </div>
                 </div>
-                <button id="authBtn" onclick="toggleAuthModal()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-medium">
-                    Login
+                <button id="authBtn" onclick="toggleAuthModal()" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-md transition font-medium">
+                    Sign In
                 </button>
             </div>
         </div>
     </aside>
 
-    <!-- Main Chat Window -->
-    <main class="flex-1 flex flex-col h-full bg-white">
-        <!-- Top Navigation -->
-        <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-            <div>
-                <h1 class="text-lg font-bold text-gray-800 flex items-center space-x-2">
-                    <span class="text-emerald-700">Kisan AI Assistant</span>
-                </h1>
-                <p class="text-xs text-gray-500">Aapka Zira'at aur Fasal Advisor</p>
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col h-full bg-slate-900">
+        
+        <!-- Top Navbar -->
+        <header class="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/50 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <span class="text-xs font-medium text-slate-400">Model:</span>
+                <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-[10px]"></i> Gemini Enterprise Pro
+                </span>
             </div>
             <div class="flex items-center space-x-2">
-                <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-xs text-gray-600 font-medium">Active</span>
+                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                <span class="text-xs text-slate-400 font-medium">System Active</span>
             </div>
         </header>
 
-        <!-- Messages Box -->
-        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50">
-            <!-- Default Bot Welcome -->
-            <div class="flex items-start space-x-3">
-                <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-robot text-sm"></i>
+        <!-- Chat Container -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar max-w-4xl mx-auto w-full">
+            
+            <!-- Default Landing Screen (ChatGPT Style - No Automatic Bot Welcome Message) -->
+            <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center py-12 px-4">
+                <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-6 shadow-lg shadow-emerald-500/5">
+                    <i class="fa-solid fa-seedling text-2xl"></i>
                 </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 max-w-xl text-gray-800 text-sm">
-                    Assalam-o-Alaikum! Main Farman Kisan Hub AI Assistant hoon. Fasal, khad, zameen ya kisi bhi kheti baadi ke masle ke liye sawal pochein.
-                </div>
-            </div>
-        </div>
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">How can I assist your agricultural query today?</h2>
+                <p class="text-xs text-slate-400 max-w-md mb-8">Ask about crop management, soil health, fertilizers, pest control, or weather-based advisories.</p>
 
-        <!-- Bottom Input Area -->
-        <div class="p-4 bg-white border-t border-gray-200">
-            <form id="chatForm" onsubmit="handleSendMessage(event)" class="flex items-center space-x-2 max-w-4xl mx-auto">
-                <div class="relative flex-1">
-                    <input type="text" id="userInput" placeholder="Apna sawal likhein..." required
-                        class="w-full pl-4 pr-12 py-3 bg-gray-100 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-sm">
-                    
-                    <!-- Voice Assistant Icon inside Input -->
-                    <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-emerald-600 p-1.5 transition" title="Voice Assistant">
-                        <i class="fa-solid fa-microphone text-lg"></i>
+                <!-- Suggestion Chips -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-left">
+                    <button onclick="usePrompt('What are the best management techniques for wheat crops?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
+                        <div class="font-medium text-slate-200 mb-0.5 group-hover:text-emerald-400">Wheat Management</div>
+                        <div class="text-[11px] text-slate-500 truncate">Best practices for optimal yield</div>
+                    </button>
+                    <button onclick="usePrompt('How to treat nitrogen deficiency in corn soil?')" class="p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl text-xs text-slate-300 transition group">
+                        <div class="font-medium text-slate-200 mb-0.5 group-hover:text-emerald-400">Soil Health Analysis</div>
+                        <div class="text-[11px] text-slate-500 truncate">Treating nitrogen deficiencies</div>
                     </button>
                 </div>
+            </div>
 
-                <!-- Send Button -->
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl transition flex items-center justify-center shadow-md">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            </form>
+            <!-- Messages Area (Populated dynamically) -->
+            <div id="chatMessages" class="space-y-6 hidden"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-slate-900 border-t border-slate-800/80">
+            <div class="max-w-4xl mx-auto">
+                <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center">
+                    <input type="text" id="userInput" placeholder="Ask anything about agriculture, crops, or soil..." required
+                        class="w-full pl-4 pr-24 py-3.5 bg-slate-950 border border-slate-800 rounded-2xl focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 text-sm text-slate-200 placeholder-slate-500 transition shadow-inner">
+                    
+                    <div class="absolute right-3 flex items-center space-x-1.5">
+                        <!-- Voice Mic Button -->
+                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="p-2 text-slate-400 hover:text-emerald-400 rounded-xl hover:bg-slate-800/60 transition" title="Voice Mode">
+                            <i class="fa-solid fa-microphone text-base"></i>
+                        </button>
+
+                        <!-- Send Button -->
+                        <button type="submit" class="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition flex items-center justify-center shadow-md">
+                            <i class="fa-solid fa-arrow-up text-sm"></i>
+                        </button>
+                    </div>
+                </form>
+                <p class="text-[10px] text-slate-500 text-center mt-2">Farman Kisan AI provides expert advice. Verify critical agronomic decisions with local experts.</p>
+            </div>
         </div>
     </main>
 
-    <!-- Login / Signup Modal -->
-    <div id="authModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative">
-            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-xl"></i>
+    <!-- Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-xmark text-lg"></i>
             </button>
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Kisan Account Login</h3>
+            <h3 class="text-lg font-bold text-slate-100 mb-1">Farman Kisan Portal</h3>
+            <p class="text-xs text-slate-400 mb-5">Sign in to sync your conversation history across devices.</p>
             
             <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Naam (Name)</label>
-                    <input type="text" id="authName" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                    <input type="text" id="authName" required placeholder="e.g. Farman Ali" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Mobile / Email</label>
-                    <input type="text" id="authEmail" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                    <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Email / Phone</label>
+                    <input type="text" id="authEmail" required placeholder="farman@example.com" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-medium transition">
-                    Login / Register
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg text-xs font-semibold transition shadow-lg shadow-emerald-600/20">
+                    Sign In / Create ID
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Logic Script -->
+    <!-- Script Section -->
     <script>
         let chatHistory = [];
         let currentUser = JSON.parse(localStorage.getItem('kisan_user')) || null;
@@ -145,12 +181,12 @@
             if (currentUser) {
                 document.getElementById('userNameDisplay').innerText = currentUser.name;
                 document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
-                document.getElementById('authBtn').innerText = 'Logout';
+                document.getElementById('authBtn').innerText = 'Sign Out';
                 document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
             } else {
                 document.getElementById('userNameDisplay').innerText = 'Guest User';
                 document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
-                document.getElementById('authBtn').innerText = 'Login';
+                document.getElementById('authBtn').innerText = 'Sign In';
                 document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
             }
         }
@@ -178,11 +214,21 @@
             updateUserUI();
         }
 
+        function usePrompt(text) {
+            document.getElementById('userInput').value = text;
+            handleSendMessage(new Event('submit'));
+        }
+
         async function handleSendMessage(e) {
             e.preventDefault();
             const inputField = document.getElementById('userInput');
             const messageText = inputField.value.trim();
             if (!messageText) return;
+
+            // Hide Welcome Screen on first query
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.classList.remove('hidden');
 
             appendMessage(messageText, 'user');
             inputField.value = '';
@@ -201,13 +247,13 @@
                 const data = await response.json();
                 removeLoadingIndicator(loadingId);
 
-                const botReply = data.reply || "Maazrat, jawab hasil nahi ho saka.";
+                const botReply = data.reply || "An error occurred while generating response.";
                 appendMessage(botReply, 'assistant');
                 chatHistory.push({ role: 'assistant', content: botReply });
 
             } catch (err) {
                 removeLoadingIndicator(loadingId);
-                appendMessage("Server Error. Koshish karein ke backend `/api/chat` active ho.", 'assistant');
+                appendMessage("Failed to connect to AI server. Please check backend configuration.", 'assistant');
             }
         }
 
@@ -216,19 +262,20 @@
             const isUser = sender === 'user';
             
             const messageDiv = document.createElement('div');
-            messageDiv.className = `flex items-start space-x-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            messageDiv.className = `flex items-start space-x-3.5 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
             
             messageDiv.innerHTML = `
-                <div class="${isUser ? 'bg-emerald-800' : 'bg-emerald-600'} text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'} text-sm"></i>
+                <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-8 w-8 flex items-center justify-center shrink-0 text-xs font-semibold">
+                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot text-emerald-400'}"></i>
                 </div>
-                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-white text-gray-800 border border-gray-200'} p-4 rounded-2xl shadow-sm max-w-xl text-sm">
-                    <p>${text}</p>
+                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-4 rounded-2xl shadow-sm max-w-2xl text-xs leading-relaxed">
+                    <p class="whitespace-pre-wrap">${text}</p>
                 </div>
             `;
             
             container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+            const scrollContainer = document.getElementById('chatContainer');
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
         }
 
         function showLoadingIndicator() {
@@ -236,17 +283,19 @@
             const id = 'loading-' + Date.now();
             const div = document.createElement('div');
             div.id = id;
-            div.className = 'flex items-start space-x-3';
+            div.className = 'flex items-start space-x-3.5';
             div.innerHTML = `
-                <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-robot text-sm"></i>
+                <div class="bg-slate-800 border border-slate-700 text-emerald-400 rounded-xl h-8 w-8 flex items-center justify-center shrink-0 text-xs">
+                    <i class="fa-solid fa-robot"></i>
                 </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 text-gray-500 text-sm italic">
-                    Jawab soch raha hai...
+                <div class="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-slate-400 text-xs italic flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-notch animate-spin text-emerald-400"></i>
+                    <span>Thinking...</span>
                 </div>
             `;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            const scrollContainer = document.getElementById('chatContainer');
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
             return id;
         }
 
@@ -259,24 +308,17 @@
             isVoiceActive = !isVoiceActive;
             const btn = document.getElementById('voiceBtn');
             if (isVoiceActive) {
-                btn.classList.add('text-emerald-600', 'animate-pulse');
+                btn.classList.add('text-emerald-400', 'animate-pulse');
             } else {
-                btn.classList.remove('text-emerald-600', 'animate-pulse');
+                btn.classList.remove('text-emerald-400', 'animate-pulse');
             }
         }
 
         function startNewChat() {
             chatHistory = [];
-            document.getElementById('chatMessages').innerHTML = `
-                <div class="flex items-start space-x-3">
-                    <div class="bg-emerald-600 text-white rounded-full h-8 w-8 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-robot text-sm"></i>
-                    </div>
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 max-w-xl text-gray-800 text-sm">
-                        Nayi guftagu shuru ho chuki hai. Fasal se mutaliq sawal pochin!
-                    </div>
-                </div>
-            `;
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('chatMessages').classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
         }
     </script>
 </body>
