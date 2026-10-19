@@ -1,366 +1,650 @@
-<!doctype html>
-<html lang="en" dir="ltr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Farman Kisan Hub | Executive AI Platform</title>
+<!DOCTYPE html>
+<html lang="en">
 
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kisan AI Saathi - Farman Kisan Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+    :root {
+      --primary: #16a34a;
+      --primary-dark: #15803d;
+      --bg-dark: #0a0f0d;
+      --bg-card: #111813;
+      --bg-input: #1a241d;
+      --text-main: #e8f5e9;
+      --text-muted: #9ca3af;
+      --border: #243328;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ================= SIDEBAR (Chat History) ================= */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: fixed;
+      left: 0; top: 0;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600; font-size: 15px;
+    }
+    .sidebar-logo i { color: var(--primary); font-size: 20px; }
+
+    .new-chat-btn {
+      margin: 14px 16px 8px;
+      padding: 11px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s;
+    }
+    .new-chat-btn:hover { background: var(--primary-dark); }
+
+    .history-label {
+      padding: 12px 20px 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 10px 10px;
+    }
+
+    .history-item {
+      padding: 11px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+      transition: background 0.2s;
+      position: relative;
+    }
+    .history-item:hover { background: var(--bg-input); }
+    .history-item.active { background: var(--bg-input); border-left: 3px solid var(--primary); }
+    .history-item i { color: var(--text-muted); font-size: 15px; }
+    .history-item span {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;
+    }
+    .history-item .del-chat {
+      margin-left: auto;
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 14px; padding: 2px;
+      display: none;
+    }
+    .history-item:hover .del-chat { display: block; }
+    .history-item .del-chat:hover { color: #ef4444; }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-footer .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 600; font-size: 13px;
+    }
+
+    /* ================= MAIN AREA ================= */
+    .main-area {
+      flex: 1;
+      margin-left: 280px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .topbar {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-card);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .menu-btn {
+      display: none;
+      background: none; border: none; color: var(--text-main);
+      font-size: 22px; cursor: pointer;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-login {
+      padding: 8px 18px;
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      border-radius: 8px;
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-login:hover { background: var(--primary); color: #fff; }
+    .btn-signup {
+      padding: 8px 18px;
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-signup:hover { background: var(--primary-dark); }
+
+    /* ================= CHAT AREA ================= */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg-row { display: flex; gap: 12px; max-width: 850px; width: 100%; margin: 0 auto; }
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .msg-row.ai .msg-avatar { background: var(--primary); color: #fff; }
+    .msg-row.user .msg-avatar { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); }
+
+    .msg-bubble {
+      padding: 13px 17px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 75%;
+      word-wrap: break-word;
+    }
+    .msg-row.ai .msg-bubble { background: var(--bg-card); border: 1px solid var(--border); border-top-left-radius: 4px; }
+    .msg-row.user .msg-bubble { background: var(--primary-dark); border-top-right-radius: 4px; }
+
+    .typing-dots { display: flex; gap: 5px; padding: 6px 2px; }
+    .typing-dots span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-muted);
+      animation: blink 1.4s infinite both;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: .3; } 40% { opacity: 1; } }
+
+    /* ================= INPUT BAR ================= */
+    .input-area {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    .input-wrapper {
+      max-width: 850px;
+      margin: 0 auto;
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 10px;
+    }
+    .input-wrapper input {
+      flex: 1;
+      background: transparent;
+      border: none; outline: none;
+      color: var(--text-main);
+      font-size: 14px;
+      padding: 8px 6px;
+    }
+    .input-wrapper input::placeholder { color: var(--text-muted); }
+
+    .icon-btn {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 19px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: var(--bg-card); color: var(--text-main); }
+
+    .icon-btn.mic-listening {
+      color: #ef4444;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    .send-btn {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .send-btn:hover { background: var(--primary-dark); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .input-hint {
+      max-width: 850px; margin: 8px auto 0;
+      font-size: 11px; color: var(--text-muted); text-align: center;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+      .main-area { margin-left: 0; }
+      .menu-btn { display: block; }
+      .msg-bubble { max-width: 88%; }
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+    }
+    .sidebar-overlay.show { display: block; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============ SIDEBAR ============ -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="bi bi-flower1"></i> Kisan AI Saathi
+      </div>
+    </div>
+
+    <button class="new-chat-btn" id="newChatBtn">
+      <i class="bi bi-plus-lg"></i> New Chat
+    </button>
+
+    <div class="history-label">Chat History</div>
+    <div class="history-list" id="historyList">
+      <!-- JS se fill hoga -->
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-avatar" id="userAvatar">F</div>
+      <div>
+        <div style="font-size:13px; color:var(--text-main);" id="userName">Guest User</div>
+        <div style="font-size:11px;">Free Plan</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main-area">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
+        <div class="topbar-title" id="topbarTitle">Nayi Guftagu</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-login" id="loginBtn">Login</button>
+        <button class="btn-signup" id="signupBtn">Sign Up</button>
+      </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+      <div class="msg-row ai">
+        <div class="msg-avatar"><i class="bi bi-robot"></i></div>
+        <div class="msg-bubble">
+          Assalam-o-Alaikum! Main Farman Kisan Hub ka AI Assistant hoon. 🌾<br>
+          Fasal, keeron, mosam ya zameen ke baare mein kuch bhi poochein — ya mic 🎤 dabaa kar bol kar poochein!
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <button class="icon-btn" id="micBtn" title="Voice se poochein">
+          <i class="bi bi-mic"></i>
+        </button>
+        <input type="text" id="chatInput" placeholder="Apna sawal likhein ya bolein..." autocomplete="off" />
+        <button class="send-btn" id="sendBtn" title="Bhejein">
+          <i class="bi bi-send"></i>
+        </button>
+      </div>
+      <div class="input-hint">AI ghalatiyan kar sakta hai. Zaroori mashwaray kisi maahir se bhi lein.</div>
+    </div>
+  </div>
+  <style>
+  /* AI ke jawab mein line-breaks sahi dikhane ke liye */
+  .msg-bubble { white-space: pre-wrap; }
+</style>
 
 <script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          hubDark: '#080d1a',
-          hubCard: 'rgba(15, 23, 42, 0.75)',
-          emeraldGlow: '#059669',
-          goldAccent: '#fbbf24',
-        },
-        fontFamily: {
-          sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-          urdu: ['"Noto Nastaliq Urdu"', 'serif'],
-        }
-      }
+  // ================= STATE =================
+  let currentChatId = null;
+  let messages = [];
+  let isSending = false;
+
+  const chatContainer = document.getElementById('chatContainer');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+  const historyList = document.getElementById('historyList');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const topbarTitle = document.getElementById('topbarTitle');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  const menuBtn = document.getElementById('menuBtn');
+
+  const API_URL = '/api/chat';
+
+  // ================= STORAGE (localStorage) =================
+  function getAllChats() {
+    try { return JSON.parse(localStorage.getItem('kisan_chats') || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveAllChats(chats) {
+    localStorage.setItem('kisan_chats', JSON.stringify(chats));
+  }
+  function generateId() {
+    return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  }
+  function makeTitle(text) {
+    text = (text || 'Nayi Guftagu').trim();
+    return text.length > 32 ? text.slice(0, 32) + '…' : text;
+  }
+  function saveCurrentChat() {
+    if (!messages.length) return;
+    const chats = getAllChats();
+    let chat = chats.find(c => c.id === currentChatId);
+    if (!chat) {
+      chat = { id: currentChatId || generateId(), title: makeTitle(messages[0].content), messages: [], created: Date.now() };
+      currentChatId = chat.id;
+      chats.unshift(chat);
     }
+    chat.messages = messages;
+    chat.updated = Date.now();
+    saveAllChats(chats);
+    renderHistory();
   }
-</script>
 
-<style>
-  body {
-    background-color: #050914;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(5, 150, 105, 0.12) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(217, 119, 6, 0.08) 0px, transparent 50%);
+  // ================= HISTORY SIDEBAR =================
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
   }
-  .glass-card {
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+
+  function renderHistory() {
+    const chats = getAllChats();
+    historyList.innerHTML = '';
+    if (!chats.length) {
+      historyList.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;text-align:center;">Abhi koi purani guftagu nahi</div>';
+      return;
+    }
+    chats.forEach(chat => {
+      const item = document.createElement('div');
+      item.className = 'history-item' + (chat.id === currentChatId ? ' active' : '');
+      item.innerHTML = '<i class="bi bi-chat-dots"></i><span>' + escapeHtml(chat.title) + '</span>' +
+                       '<button class="del-chat" title="Delete"><i class="bi bi-trash"></i></button>';
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.del-chat')) { deleteChat(chat.id); return; }
+        loadChat(chat.id);
+      });
+      historyList.appendChild(item);
+    });
   }
-  .glass-nav {
-    background: rgba(8, 13, 26, 0.85);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  function deleteChat(id) {
+    let chats = getAllChats();
+    chats = chats.filter(c => c.id !== id);
+    saveAllChats(chats);
+    if (id === currentChatId) startNewChat();
+    else renderHistory();
   }
-  .glow-border:focus-within {
-    border-color: rgba(16, 185, 129, 0.6);
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
+
+  function loadChat(id) {
+    const chat = getAllChats().find(c => c.id === id);
+    if (!chat) return;
+    currentChatId = chat.id;
+    messages = chat.messages || [];
+    renderMessages();
+    topbarTitle.textContent = chat.title;
+    closeSidebarMobile();
+    renderHistory();
   }
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: rgba(5, 9, 20, 0.5); }
-  ::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 4px; }
-</style>
-</head>
-<body class="text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
 
-  <!-- Header -->
-  <header class="glass-nav sticky top-0 z-50 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="relative w-10 h-10 flex items-center justify-center">
-        <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" stroke="url(#logoGlow)" stroke-width="3" class="animate-pulse" />
-          <path d="M50 20 L62 42 L85 38 L70 58 L82 80 L50 68 L18 80 L30 58 L15 38 L38 42 Z" fill="url(#crownGrad)" />
-          <path d="M50 35 C55 45, 65 50, 65 65 C65 73, 58 80, 50 80 C42 80, 35 73, 35 65 C35 50, 45 45, 50 35 Z" fill="url(#leafGrad)" />
-          <defs>
-            <linearGradient id="logoGlow" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#10b981" />
-              <stop offset="100%" stop-color="#f59e0b" />
-            </linearGradient>
-            <linearGradient id="crownGrad" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#fbbf24" />
-              <stop offset="100%" stop-color="#d97706" />
-            </linearGradient>
-            <linearGradient id="leafGrad" x1="0" y1="0" x2="100" y2="100">
-              <stop offset="0%" stop-color="#34d399" />
-              <stop offset="100%" stop-color="#059669" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+  function startNewChat() {
+    currentChatId = null;
+    messages = [];
+    chatContainer.innerHTML =
+      '<div class="msg-row ai">' +
+        '<div class="msg-avatar"><i class="bi bi-robot"></i></div>' +
+        '<div class="msg-bubble">Assalam-o-Alaikum! Main Farman Kisan Hub ka AI Assistant hoon. 🌾<br>Fasal, keeron, mosam ya zameen ke baare mein kuch bhi poochein — ya mic 🎤 dabaa kar bol kar poochein!</div>' +
+      '</div>';
+    topbarTitle.textContent = 'Nayi Guftagu';
+    closeSidebarMobile();
+    renderHistory();
+  }
 
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="font-bold text-base sm:text-lg tracking-wide text-white">FARMAN KISAN HUB</h1>
-          <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-amber-500/20 text-emerald-300 border border-emerald-500/30">
-            FAST AI
-          </span>
-        </div>
-        <p class="text-[11px] text-slate-400">Multilingual Agriculture Intelligence</p>
-      </div>
-    </div>
+  function renderMessages() {
+    chatContainer.innerHTML = '';
+    messages.forEach(m => appendMessage(m.role, m.content, false));
+    scrollBottom();
+  }
 
-    <!-- User Auth Status / Action -->
-    <div class="flex items-center gap-3">
-      <div id="userSection" class="flex items-center gap-2">
-        <button id="authBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded-lg font-semibold transition-all">
-          Login / Signup
-        </button>
-      </div>
-    </div>
-  </header>
+  // ================= MESSAGE UI =================
+  function appendMessage(role, content, doScroll = true) {
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
+    const avatarIcon = role === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
+    row.innerHTML =
+      '<div class="msg-avatar">' + avatarIcon + '</div>' +
+      '<div class="msg-bubble">' + escapeHtml(content) + '</div>';
+    chatContainer.appendChild(row);
+    if (doScroll) scrollBottom();
+    return row;
+  }
 
-  <!-- Auth Modal -->
-  <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="glass-card max-w-md w-full p-6 rounded-2xl relative border border-white/10 shadow-2xl">
-      <button id="closeAuth" class="absolute top-4 right-4 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
+  function showTyping() {
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.id = 'typingRow';
+    row.innerHTML =
+      '<div class="msg-avatar"><i class="bi bi-robot"></i></div>' +
+      '<div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+    chatContainer.appendChild(row);
+    scrollBottom();
+  }
+  function hideTyping() {
+    const t = document.getElementById('typingRow');
+    if (t) t.remove();
+  }
+  function scrollBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
 
-      <h2 id="authTitle" class="text-xl font-bold text-white mb-2">Welcome Back</h2>
-      <p id="authSub" class="text-xs text-slate-400 mb-6">Login or create an account to auto-save chat history</p>
+  // ================= SEND =================
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isSending) return;
 
-      <form id="authForm" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
-          <input id="authEmail" type="email" placeholder="kisan@farm.com" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
-          <input id="authPassword" type="password" placeholder="••••••••" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-        </div>
+    isSending = true;
+    sendBtn.disabled = true;
 
-        <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-lg shadow-emerald-600/30">
-          Login
-        </button>
-      </form>
+    messages.push({ role: 'user', content: text });
+    appendMessage('user', text);
+    if (!currentChatId) currentChatId = generateId();
+    saveCurrentChat();
+    chatInput.value = '';
+    showTyping();
 
-      <p class="text-center text-xs text-slate-400 mt-4">
-        <span id="toggleAuthText">Don't have an account?</span>
-        <button id="toggleAuthBtn" class="text-emerald-400 font-semibold underline ml-1">Sign Up</button>
-      </p>
-    </div>
-  </div>
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messages })
+      });
+      const data = await res.json();
+      hideTyping();
+      const reply = data.reply || 'Maazrat, jawab nahi mil saka. Dobara koshish karein.';
+      messages.push({ role: 'assistant', content: reply });
+      appendMessage('assistant', reply);
+      saveCurrentChat();
+    } catch (err) {
+      hideTyping();
+      appendMessage('assistant', 'Network error: ' + err.message);
+    }
 
-  <!-- Navigation Tabs -->
-  <div class="max-w-3xl w-full mx-auto px-4 pt-4">
-    <div class="flex bg-slate-950/60 p-1 rounded-xl border border-white/10">
-      <button class="tab active flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" data-tab="chat">
-        <i class="fa-solid fa-comments text-xs"></i> <span>Ask AI Assistant</span>
-      </button>
-      <button class="tab flex-1 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-2" data-tab="advice">
-        <i class="fa-solid fa-wheat-awn text-xs"></i> <span>Crop Consultation Form</span>
-      </button>
-    </div>
-  </div>
+    isSending = false;
+    sendBtn.disabled = false;
+    chatInput.focus();
+  }
 
-  <!-- Main Content -->
-  <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
-    <section id="chat" class="panel active flex-1 flex flex-col justify-between h-full">
-      <div id="messages" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-[52vh] max-h-[60vh] py-2"></div>
+  // ================= VOICE INPUT (Web Speech API) =================
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
 
-      <div id="chips" class="flex flex-wrap gap-2 my-3 justify-center">
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>🌾 Best crop to plant this season?</span>
-        </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>⚡ Short duration crop options</span>
-        </button>
-        <button class="chip text-xs bg-white/5 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/40 text-slate-300 px-3.5 py-2 rounded-xl transition-all">
-          <span>🍂 Wheat leaf yellowing treatment</span>
-        </button>
-      </div>
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ur-PK';
+    recognition.interimResults = true;
+    recognition.continuous = false;
 
-      <div class="glass-card p-2.5 rounded-2xl border border-white/10 glow-border transition-all flex items-center gap-2 shadow-2xl">
-        <input id="q" type="text" placeholder="Ask anything in English, Urdu, or Roman Urdu..." autocomplete="off" class="flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-3">
-        <button id="send" class="primary bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">
-          Send <i class="fa-solid fa-paper-plane text-xs ml-1"></i>
-        </button>
-      </div>
-    </section>
-
-    <section id="advice" class="panel hidden">
-      <div class="glass-card p-6 rounded-2xl border border-white/10 shadow-2xl">
-        <h2 class="text-base font-bold text-white mb-4">Crop Consultation Form</h2>
-        <form id="adviceForm" class="space-y-4">
-          <input name="location" placeholder="Region / District (e.g. Multan)" required class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none">
-          <textarea name="notes" rows="3" placeholder="Describe issue..." class="w-full bg-slate-950/80 border border-white/10 rounded-xl p-3 text-sm text-slate-200 focus:outline-none"></textarea>
-          <button class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl text-sm" type="submit" id="adviceBtn">Get Consultation</button>
-        </form>
-        <div id="result" class="mt-4 p-4 rounded-xl glass-card text-sm text-slate-200 hidden"></div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="text-center py-3 text-xs text-slate-500 border-t border-white/5 bg-slate-950/50">
-    Farman Kisan Hub • Powered by Gemini AI
-  </footer>
-
-  <!-- Firebase Modular Scripts -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCu0rYEobmgK0cCmZLroIWguiPqyPhOAeI",
-      authDomain: "farman-5f2fe.firebaseapp.com",
-      projectId: "farman-5f2fe",
-      storageBucket: "farman-5f2fe.firebasestorage.app",
-      messagingSenderId: "392223096053",
-      appId: "1:392223096053:web:9c2d61ad6a0d9e2acb59bc",
-      measurementId: "G-TF8KM4G88G"
+    recognition.onstart = () => {
+      listening = true;
+      micBtn.classList.add('mic-listening');
+      chatInput.placeholder = 'Sun raha hoon... boliye...';
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUser = null;
-    let isSignUp = false;
-
-    const authModal = document.getElementById("authModal");
-    const authBtn = document.getElementById("authBtn");
-    const closeAuth = document.getElementById("closeAuth");
-    const authForm = document.getElementById("authForm");
-    const toggleAuthBtn = document.getElementById("toggleAuthBtn");
-    const authTitle = document.getElementById("authTitle");
-    const authSubmitBtn = document.getElementById("authSubmitBtn");
-    const toggleAuthText = document.getElementById("toggleAuthText");
-    const userSection = document.getElementById("userSection");
-
-    authBtn.addEventListener("click", () => authModal.classList.remove("hidden"));
-    closeAuth.addEventListener("click", () => authModal.classList.add("hidden"));
-
-    toggleAuthBtn.addEventListener("click", () => {
-      isSignUp = !isSignUp;
-      authTitle.textContent = isSignUp ? "Create Account" : "Welcome Back";
-      authSubmitBtn.textContent = isSignUp ? "Sign Up" : "Login";
-      toggleAuthText.textContent = isSignUp ? "Already have an account?" : "Don't have an account?";
-      toggleAuthBtn.textContent = isSignUp ? "Login" : "Sign Up";
-    });
-
-    authForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("authEmail").value;
-      const pass = document.getElementById("authPassword").value;
-
-      try {
-        if (isSignUp) {
-          await createUserWithEmailAndPassword(auth, email, pass);
-        } else {
-          await signInWithEmailAndPassword(auth, email, pass);
-        }
-        authModal.classList.add("hidden");
-      } catch (err) {
-        alert(err.message);
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
       }
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      if (user) {
-        userSection.innerHTML = `
-          <span class="text-xs text-emerald-400 font-medium">${user.email.split('@')[0]}</span>
-          <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs px-2.5 py-1 rounded-lg">Logout</button>
-        `;
-        document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
-        loadUserHistory(user.uid);
-      } else {
-        userSection.innerHTML = `<button id="authBtn" class="bg-emerald-600 text-xs px-3.5 py-1.5 rounded-lg font-semibold">Login / Signup</button>`;
-        document.getElementById("authBtn").addEventListener("click", () => authModal.classList.remove("hidden"));
+      chatInput.value = transcript;
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) {
+        setTimeout(() => sendMessage(), 300);
       }
-    });
+    };
 
-    async function saveChatToCloud(userMsg, botReply) {
-      if (!currentUser) return;
-      try {
-        await addDoc(collection(db, "chats"), {
-          userId: currentUser.uid,
-          userMsg,
-          botReply,
-          createdAt: new Date()
-        });
-      } catch (e) {
-        console.error("Cloud History Error:", e);
+    recognition.onerror = (event) => {
+      listening = false;
+      micBtn.classList.remove('mic-listening');
+      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
+      if (event.error === 'not-allowed') {
+        alert('Mic ki ijazat (permission) dein taake voice input kaam kare.');
       }
+    };
+
+    recognition.onend = () => {
+      listening = false;
+      micBtn.classList.remove('mic-listening');
+      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
+    };
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (!recognition) {
+      alert('Aapka browser voice input support nahi karta. Chrome ya Edge istemal karein.');
+      return;
     }
-
-    async function loadUserHistory(uid) {
-      try {
-        document.getElementById("messages").innerHTML = "";
-        const q = query(collection(db, "chats"), where("userId", "==", uid));
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          addBubble(data.userMsg, "me");
-          addBubble(data.botReply, "bot");
-        });
-      } catch (e) {
-        console.error("History loading failed:", e);
-      }
+    if (listening) {
+      recognition.stop();
+    } else {
+      try { recognition.start(); } catch (e) {}
     }
+  });
 
-    window.saveChatToCloud = saveChatToCloud;
-  </script>
+  // ================= SIDEBAR (Mobile) =================
+  function openSidebarMobile() {
+    sidebar.classList.add('open');
+    sidebarOverlay.classList.add('show');
+  }
+  function closeSidebarMobile() {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('show');
+  }
+  menuBtn.addEventListener('click', openSidebarMobile);
+  sidebarOverlay.addEventListener('click', closeSidebarMobile);
 
-  <script>
-    // Tab Switching
-    document.querySelectorAll(".tab").forEach((t) => {
-      t.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach((btn) => btn.classList.remove("bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white"));
-        t.classList.add("bg-gradient-to-r", "from-emerald-600", "to-teal-600", "text-white");
-        document.querySelectorAll(".panel").forEach((p) => p.classList.add("hidden"));
-        document.getElementById(t.dataset.tab).classList.remove("hidden");
-      });
-    });
+  // ================= LOGIN/SIGNUP (Placeholder) =================
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    alert('Login system yahan connect hoga (Firebase/Auth).');
+  });
+  document.getElementById('signupBtn').addEventListener('click', () => {
+    alert('Signup system yahan connect hoga (Firebase/Auth).');
+  });
 
-    const box = document.getElementById("messages");
-    const input = document.getElementById("q");
-    const sendBtn = document.getElementById("send");
+  // ================= EVENTS =================
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+  newChatBtn.addEventListener('click', startNewChat);
 
-    function addBubble(text, cls) {
-      const isUser = cls.includes("me");
-      const d = document.createElement("div");
-      d.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
-      d.innerHTML = `
-        <div class="w-8 h-8 rounded-xl ${isUser ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'} flex items-center justify-center shrink-0 text-xs">
-          <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'}"></i>
-        </div>
-        <div class="glass-card p-3 rounded-2xl max-w-[85%] text-sm text-slate-200">
-          ${text}
-        </div>
-      `;
-      box.appendChild(d);
-      box.scrollTop = box.scrollHeight;
-      return d;
-    }
+  // ================= INIT =================
+  renderHistory();
+</script>
 
-    async function send(text) {
-      text = (text || input.value).trim();
-      if (!text) return;
-      input.value = "";
-      
-      addBubble(text, "me");
-      const wait = addBubble("Processing...", "bot typing");
-
-      try {
-        const r = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
-        });
-        const data = await r.json();
-        wait.remove();
-
-        const reply = data.reply || "No response received.";
-        addBubble(reply, "bot");
-
-        if (window.saveChatToCloud) {
-          window.saveChatToCloud(text, reply);
-        }
-      } catch (e) {
-        wait.remove();
-        addBubble("Error connecting to server.", "bot");
-      }
-    }
-
-    sendBtn.addEventListener("click", () => send());
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
-    document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => send(c.textContent)));
-  </script>
 </body>
 </html>
