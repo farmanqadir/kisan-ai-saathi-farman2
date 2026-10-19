@@ -240,403 +240,241 @@
     </div>
 
     <!-- Script Logic -->
-    <script>
-        let currentSessionId = null;
-        let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions')) || [];
-        let currentUser = null;
-        let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
-        const MAX_GUEST_LIMIT = 5;
-        let authMode = 'signin';
-        let isVoiceActive = false;
-        let selectedImageData = null;
-        let recognition = null;
+<script>
+  // ================= STATE =================
+  let currentChatId = null;
+  let messages = [];
+  let isSending = false;
 
-        document.addEventListener("DOMContentLoaded", function() {
-            checkStoredUser();
-            renderHistoryList();
-            initSpeechRecognition();
-        });
+  const chatContainer = document.getElementById('chatContainer');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+  const historyList = document.getElementById('historyList');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const topbarTitle = document.getElementById('topbarTitle');
 
-        // Initialize Speech Recognition API
-        function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = true;
-                recognition.lang = 'ur-PK'; // Supports Urdu & English mix
+  const API_URL = '/api/chat';
 
-                recognition.onstart = function() {
-                    isVoiceActive = true;
-                    document.getElementById('voiceStatusBox').classList.remove('hidden');
-                    document.getElementById('micIcon').classList.add('text-rose-500', 'animate-pulse');
-                };
+  // ================= STORAGE (poori history save) =================
+  function getAllChats() {
+    try { return JSON.parse(localStorage.getItem('kisan_chats') || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveAllChats(chats) {
+    localStorage.setItem('kisan_chats', JSON.stringify(chats));
+  }
+  function generateId() {
+    return 'chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  }
+  function makeTitle(text) {
+    text = (text || 'Nayi Guftagu').trim();
+    return text.length > 32 ? text.slice(0, 32) + '…' : text;
+  }
+  // Har message ke baad FORAN save hota hai
+  function saveCurrentChat() {
+    if (!messages.length) return;
+    const chats = getAllChats();
+    let chat = chats.find(c => c.id === currentChatId);
+    if (!chat) {
+      chat = { id: currentChatId || generateId(), title: makeTitle(messages[0].content), messages: [], created: Date.now() };
+      currentChatId = chat.id;
+      chats.unshift(chat);
+    }
+    chat.messages = messages;
+    chat.updated = Date.now();
+    saveAllChats(chats);
+    renderHistory();
+  }
 
-                recognition.onresult = function(event) {
-                    let transcript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        transcript += event.results[i][0].transcript;
-                    }
-                    document.getElementById('userInput').value = transcript;
-                };
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
 
-                recognition.onerror = function(event) {
-                    console.error("Speech Error: ", event.error);
-                    stopVoiceRecording();
-                };
+  // ================= SIDEBAR HISTORY =================
+  function renderHistory() {
+    if (!historyList) return;
+    const chats = getAllChats();
+    historyList.innerHTML = '';
+    if (!chats.length) {
+      historyList.innerHTML = '<div style="padding:14px;color:#9ca3af;font-size:12px;text-align:center;">Abhi koi purani guftagu nahi</div>';
+      return;
+    }
+    chats.forEach(chat => {
+      const item = document.createElement('div');
+      item.className = 'history-item' + (chat.id === currentChatId ? ' active' : '');
+      item.innerHTML = '<i class="bi bi-chat-dots"></i><span>' + escapeHtml(chat.title) + '</span>' +
+                       '<button class="del-chat" title="Delete"><i class="bi bi-trash"></i></button>';
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.del-chat')) { deleteChat(chat.id); return; }
+        loadChat(chat.id);
+      });
+      historyList.appendChild(item);
+    });
+  }
 
-                recognition.onend = function() {
-                    stopVoiceRecording();
-                };
-            }
-        }
+  function deleteChat(id) {
+    let chats = getAllChats();
+    chats = chats.filter(c => c.id !== id);
+    saveAllChats(chats);
+    if (id === currentChatId) startNewChat();
+    else renderHistory();
+  }
 
-        function toggleVoiceInput() {
-            if (!recognition) {
-                alert("Speech recognition is not supported in this browser. Please use Chrome/Edge.");
-                return;
-            }
+  function loadChat(id) {
+    const chat = getAllChats().find(c => c.id === id);
+    if (!chat) return;
+    currentChatId = chat.id;
+    messages = chat.messages || [];
+    renderMessages();
+    if (topbarTitle) topbarTitle.textContent = chat.title;
+    renderHistory();
+  }
 
-            if (isVoiceActive) {
-                recognition.stop();
-            } else {
-                try {
-                    recognition.start();
-                } catch (err) {
-                    recognition.stop();
-                }
-            }
-        }
+  function startNewChat() {
+    currentChatId = null;
+    messages = [];
+    if (chatContainer) {
+      chatContainer.innerHTML =
+        '<div class="msg-row ai">' +
+          '<div class="msg-avatar"><i class="bi bi-robot"></i></div>' +
+          '<div class="msg-bubble">Assalam-o-Alaikum! Main Farman Kisan Hub ka AI Assistant hoon. 🌾<br>Kuch bhi poochein — likh kar ya mic 🎤 daba kar bol kar!</div>' +
+        '</div>';
+    }
+    if (topbarTitle) topbarTitle.textContent = 'Nayi Guftagu';
+    renderHistory();
+  }
 
-        function stopVoiceRecording() {
-            isVoiceActive = false;
-            if (recognition) recognition.stop();
-            document.getElementById('voiceStatusBox').classList.add('hidden');
-            document.getElementById('micIcon').classList.remove('text-rose-500', 'animate-pulse');
-        }
+  function renderMessages() {
+    chatContainer.innerHTML = '';
+    messages.forEach(m => appendMessage(m.role, m.content, false));
+    scrollBottom();
+  }
 
-        function checkStoredUser() {
-            const savedUser = localStorage.getItem('fkh_user');
-            if (savedUser) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                } catch (e) {
-                    currentUser = null;
-                }
-            }
-            updateUserUI();
-        }
+  // ================= MESSAGE UI =================
+  function appendMessage(role, content, doScroll = true) {
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
+    const avatarIcon = role === 'user' ? '<i class="bi bi-person"></i>' : '<i class="bi bi-robot"></i>';
+    row.innerHTML =
+      '<div class="msg-avatar">' + avatarIcon + '</div>' +
+      '<div class="msg-bubble">' + escapeHtml(content) + '</div>';
+    chatContainer.appendChild(row);
+    if (doScroll) scrollBottom();
+    return row;
+  }
 
-        function toggleMobileSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebarBackdrop');
-            sidebar.classList.toggle('-translate-x-full');
-            backdrop.classList.toggle('hidden');
-        }
+  function scrollBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
 
-        function closeSidebarOnMobile() {
-            if (window.innerWidth < 768) {
-                toggleMobileSidebar();
-            }
-        }
+  // ================= SEND (INSTANT STREAMING) =================
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isSending) return;
 
-        function triggerImageUpload() {
-            document.getElementById('imageInput').click();
-        }
+    isSending = true;
+    if (sendBtn) sendBtn.disabled = true;
 
-        function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                document.getElementById('imagePreviewName').innerText = file.name;
-                document.getElementById('imagePreviewBox').classList.remove('hidden');
-                document.getElementById('imagePreviewBox').classList.add('flex');
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    selectedImageData = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+    // User ka message foran save + show
+    messages.push({ role: 'user', content: text });
+    appendMessage('user', text);
+    if (!currentChatId) currentChatId = generateId();
+    saveCurrentChat();
+    chatInput.value = '';
 
-        function removeSelectedImage() {
-            selectedImageData = null;
-            document.getElementById('imageInput').value = '';
-            document.getElementById('imagePreviewBox').classList.add('hidden');
-            document.getElementById('imagePreviewBox').classList.remove('flex');
-        }
+    // AI ka khaali bubble — jawab live type hoga
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.innerHTML = '<div class="msg-avatar"><i class="bi bi-robot"></i></div><div class="msg-bubble"></div>';
+    chatContainer.appendChild(row);
+    const bubble = row.querySelector('.msg-bubble');
+    scrollBottom();
 
-        function updateUserUI() {
-            const guestBadge = document.getElementById('guestLimitBadge');
-            const guestText = document.getElementById('guestCountText');
-            const inputField = document.getElementById('userInput');
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messages })
+      });
 
-            if (currentUser && currentUser.id) {
-                document.getElementById('userNameDisplay').innerText = currentUser.name || currentUser.email.split('@')[0];
-                document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
-                document.getElementById('authBtn').innerText = 'Sign Out';
-                document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
-                guestBadge.classList.add('hidden');
-                
-                inputField.disabled = false;
-                inputField.placeholder = "Ask Farman Kisan AI...";
-            } else {
-                document.getElementById('userNameDisplay').innerText = 'Guest User';
-                document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
-                document.getElementById('authBtn').innerText = 'Sign In';
-                document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
-                guestBadge.classList.remove('hidden');
-                
-                const remaining = Math.max(0, MAX_GUEST_LIMIT - guestMessageCount);
-                guestText.innerText = `${remaining} Free Left`;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = '';
 
-                if (guestMessageCount >= MAX_GUEST_LIMIT) {
-                    inputField.disabled = true;
-                    inputField.placeholder = "Free limit reached. Sign In to continue.";
-                } else {
-                    inputField.disabled = false;
-                    inputField.placeholder = "Ask Farman Kisan AI...";
-                }
-            }
-        }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullReply += decoder.decode(value, { stream: true });
+        bubble.textContent = fullReply;   // live typing effect
+        scrollBottom();
+      }
 
-        function toggleAuthModal() {
-            document.getElementById('authModal').classList.toggle('hidden');
-        }
+      if (!fullReply.trim()) fullReply = 'Maazrat, jawab nahi mil saka. Dobara koshish karein.';
+      messages.push({ role: 'assistant', content: fullReply });
+      saveCurrentChat();                  // AI ka jawab bhi foran save
+    } catch (err) {
+      bubble.textContent = 'Network error: ' + err.message;
+      messages.push({ role: 'assistant', content: bubble.textContent });
+      saveCurrentChat();
+    }
 
-        function switchAuthTab(mode) {
-            authMode = mode;
-            const tabSignIn = document.getElementById('tabSignIn');
-            const tabSignUp = document.getElementById('tabSignUp');
-            const nameField = document.getElementById('nameField');
-            const submitBtn = document.getElementById('authSubmitBtn');
+    isSending = false;
+    if (sendBtn) sendBtn.disabled = false;
+    chatInput.focus();
+  }
 
-            if (mode === 'signup') {
-                tabSignUp.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
-                tabSignIn.className = "flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-                nameField.classList.remove('hidden');
-                submitBtn.innerText = "Create Account";
-            } else {
-                tabSignIn.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
-                tabSignUp.className = "flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-                nameField.classList.add('hidden');
-                submitBtn.innerText = "Sign In";
-            }
-        }
+  // ================= VOICE INPUT =================
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
 
-        function handleAuthSubmit(e) {
-            e.preventDefault();
-            const email = document.getElementById('authEmail').value;
-            const name = document.getElementById('authName').value || email.split('@')[0];
-            const userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
-            
-            currentUser = { name, email, id: userId };
-            localStorage.setItem('fkh_user', JSON.stringify(currentUser));
-            
-            updateUserUI();
-            toggleAuthModal();
-        }
+  if (SpeechRecognition && micBtn) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ur-PK';
+    recognition.interimResults = true;
+    recognition.continuous = false;
 
-        function logoutUser() {
-            localStorage.removeItem('fkh_user');
-            currentUser = null;
-            updateUserUI();
-            startNewChat();
-        }
+    recognition.onstart = () => {
+      listening = true;
+      micBtn.classList.add('mic-listening');
+      chatInput.placeholder = 'Sun raha hoon... boliye...';
+    };
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      chatInput.value = transcript;
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) setTimeout(() => sendMessage(), 300);
+    };
+    recognition.onerror = () => {
+      listening = false;
+      micBtn.classList.remove('mic-listening');
+      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
+    };
+    recognition.onend = () => {
+      listening = false;
+      micBtn.classList.remove('mic-listening');
+      chatInput.placeholder = 'Apna sawal likhein ya bolein...';
+    };
 
-        function usePrompt(text) {
-            document.getElementById('userInput').value = text;
-            handleSendMessage(new Event('submit'));
-        }
+    micBtn.addEventListener('click', () => {
+      if (listening) { recognition.stop(); }
+      else { try { recognition.start(); } catch (e) {} }
+    });
+  }
 
-        async function handleSendMessage(e) {
-            e.preventDefault();
+  // ================= EVENTS =================
+  if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+  if (newChatBtn) newChatBtn.addEventListener('click', startNewChat);
 
-            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
-                alert("Free limit reached! Please Sign In / Sign Up to continue chatting.");
-                toggleAuthModal();
-                return;
-            }
-
-            const inputField = document.getElementById('userInput');
-            const messageText = inputField.value.trim();
-            if (!messageText && !selectedImageData) return;
-
-            if (!currentUser) {
-                guestMessageCount++;
-                localStorage.setItem('fkh_guest_count', guestMessageCount.toString());
-                updateUserUI();
-            }
-
-            document.getElementById('welcomeScreen').classList.add('hidden');
-            const messagesContainer = document.getElementById('chatMessages');
-            messagesContainer.classList.remove('hidden');
-
-            const contentToSend = messageText || "Analyzing attached file/image...";
-            appendMessage(contentToSend, 'user', selectedImageData);
-            inputField.value = '';
-
-            const currentImage = selectedImageData;
-            removeSelectedImage();
-
-            if (!currentSessionId) {
-                currentSessionId = 'session_' + Date.now();
-                const newSession = {
-                    id: currentSessionId,
-                    title: contentToSend.length > 25 ? contentToSend.substring(0, 25) + '...' : contentToSend,
-                    timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    messages: []
-                };
-                allSessions.unshift(newSession);
-            }
-
-            const session = allSessions.find(s => s.id === currentSessionId);
-            session.messages.push({ role: 'user', content: contentToSend });
-            saveSessions();
-
-            const loadingId = showLoadingIndicator();
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: session.messages })
-                });
-
-                const data = await response.json();
-                removeLoadingIndicator(loadingId);
-
-                const botReply = data.reply || "An error occurred while generating response.";
-                appendMessage(botReply, 'assistant');
-                
-                session.messages.push({ role: 'assistant', content: botReply });
-                saveSessions();
-
-            } catch (err) {
-                removeLoadingIndicator(loadingId);
-                appendMessage("Failed to connect to AI server.", 'assistant');
-            }
-
-            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
-                inputField.disabled = true;
-                inputField.placeholder = "Free limit reached. Sign In to continue.";
-                setTimeout(() => toggleAuthModal(), 1000);
-            }
-        }
-
-        function appendMessage(text, sender, imgData = null) {
-            const container = document.getElementById('chatMessages');
-            const isUser = sender === 'user';
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flex items-start space-x-2.5 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
-            
-            let imgHTML = imgData ? `<img src="${imgData}" class="max-w-xs rounded-xl mb-2 border border-slate-700">` : '';
-
-            messageDiv.innerHTML = `
-                <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs font-semibold">
-                    <i class="fa-solid ${isUser ? 'fa-user' : 'fa-leaf text-emerald-400'} text-[11px]"></i>
-                </div>
-                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-3.5 rounded-2xl shadow-sm w-full text-xs leading-relaxed overflow-x-auto">
-                    ${imgHTML}
-                    <div class="whitespace-pre-wrap font-normal">${text}</div>
-                </div>
-            `;
-            
-            container.appendChild(messageDiv);
-            const scrollContainer = document.getElementById('chatContainer');
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
-
-        function showLoadingIndicator() {
-            const container = document.getElementById('chatMessages');
-            const id = 'loading-' + Date.now();
-            const div = document.createElement('div');
-            div.id = id;
-            div.className = 'flex items-start space-x-2.5';
-            div.innerHTML = `
-                <div class="bg-slate-800 border border-slate-700 text-emerald-400 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs">
-                    <i class="fa-solid fa-leaf text-[11px]"></i>
-                </div>
-                <div class="bg-slate-950 border border-slate-800 p-3 rounded-2xl text-slate-400 text-xs italic flex items-center space-x-2">
-                    <i class="fa-solid fa-circle-notch animate-spin text-emerald-400"></i>
-                    <span>Analyzing...</span>
-                </div>
-            `;
-            container.appendChild(div);
-            const scrollContainer = document.getElementById('chatContainer');
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-            return id;
-        }
-
-        function removeLoadingIndicator(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        }
-
-        function saveSessions() {
-            localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
-            renderHistoryList();
-        }
-
-        function renderHistoryList() {
-            const container = document.getElementById('chatHistoryList');
-            document.getElementById('historyCount').innerText = allSessions.length;
-            container.innerHTML = '';
-
-            allSessions.forEach(session => {
-                const isActive = session.id === currentSessionId;
-                const div = document.createElement('div');
-                div.className = `p-2 rounded-xl text-xs cursor-pointer transition flex items-center justify-between group ${isActive ? 'bg-slate-800/90 text-slate-100 border border-slate-700' : 'text-slate-400 hover:bg-slate-900/80 hover:text-slate-200 border border-transparent'}`;
-                
-                div.onclick = () => { loadSession(session.id); closeSidebarOnMobile(); };
-                div.innerHTML = `
-                    <div class="flex items-center space-x-2 truncate">
-                        <i class="fa-regular fa-message text-slate-500 text-[11px]"></i>
-                        <span class="truncate">${session.title}</span>
-                    </div>
-                    <button onclick="deleteSession(event, '${session.id}')" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 p-1 transition">
-                        <i class="fa-solid fa-trash-can text-[10px]"></i>
-                    </button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function loadSession(id) {
-            currentSessionId = id;
-            const session = allSessions.find(s => s.id === id);
-            if (!session) return;
-
-            document.getElementById('welcomeScreen').classList.add('hidden');
-            const container = document.getElementById('chatMessages');
-            container.innerHTML = '';
-            container.classList.remove('hidden');
-
-            session.messages.forEach(msg => {
-                appendMessage(msg.content, msg.role);
-            });
-
-            renderHistoryList();
-        }
-
-        function deleteSession(e, id) {
-            e.stopPropagation();
-            allSessions = allSessions.filter(s => s.id !== id);
-            if (currentSessionId === id) {
-                startNewChat();
-            } else {
-                saveSessions();
-            }
-        }
-
-        function startNewChat() {
-            currentSessionId = null;
-            document.getElementById('chatMessages').innerHTML = '';
-            document.getElementById('chatMessages').classList.add('hidden');
-            document.getElementById('welcomeScreen').classList.remove('hidden');
-            renderHistoryList();
-        }
-    </script>
+  // ================= INIT =================
+  renderHistory();
+</script>
 </body>
 </html>
