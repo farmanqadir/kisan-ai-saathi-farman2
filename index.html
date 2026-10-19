@@ -20,7 +20,7 @@
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-950/80 z-30 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
 
-    <!-- Sidebar (Collapsible Drawer on Mobile, Fixed on Desktop) -->
+    <!-- Sidebar -->
     <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-slate-950 flex flex-col justify-between border-r border-slate-800 shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
             <!-- Header & Close Button -->
@@ -109,7 +109,7 @@
         <!-- Chat Container -->
         <div id="chatContainer" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar max-w-4xl mx-auto w-full pb-36 md:pb-32">
             
-            <!-- Default Landing Screen (ChatGPT Style Layout) -->
+            <!-- Default Landing Screen -->
             <div id="welcomeScreen" class="min-h-full flex flex-col items-center justify-center text-center py-6 px-2">
                 <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 shadow-lg shadow-emerald-500/5">
                     <i class="fa-solid fa-leaf text-2xl"></i>
@@ -117,7 +117,7 @@
                 <h2 class="text-xl md:text-2xl font-bold text-slate-100 mb-1">Farman Kisan Hub AI</h2>
                 <p class="text-xs text-slate-400 max-w-md mb-8">Ask any agronomic questions regarding crops, soil health, or fertilizers.</p>
 
-                <!-- ChatGPT Style Menu Options -->
+                <!-- Options -->
                 <div class="w-full max-w-md space-y-2 text-left mb-6">
                     <button onclick="triggerImageUpload()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
                         <i class="fa-regular fa-image text-emerald-400 text-base"></i>
@@ -147,7 +147,7 @@
             <div id="chatMessages" class="space-y-4 hidden"></div>
         </div>
 
-        <!-- Floating Fixed Bottom Input Bar (ChatGPT Style) -->
+        <!-- Floating Fixed Bottom Input Bar -->
         <div class="fixed bottom-0 left-0 md:left-72 right-0 p-3 bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 z-20">
             <div class="max-w-4xl mx-auto">
                 
@@ -162,34 +162,27 @@
                     </button>
                 </div>
 
-                <!-- Hidden Input for Files/Images -->
                 <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
 
                 <!-- Floating Input Capsule -->
                 <form id="chatForm" onsubmit="handleSendMessage(event)" class="relative flex items-center bg-slate-950 border border-slate-800 rounded-3xl px-3 py-1.5 focus-within:border-emerald-500/50 shadow-xl">
                     
-                    <!-- Plus Button (+ Image/File Upload) -->
                     <button type="button" onclick="triggerImageUpload()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition shrink-0 mr-1.5" title="Upload Image/File">
                         <i class="fa-solid fa-plus text-sm"></i>
                     </button>
 
-                    <!-- Text Input Box -->
                     <input type="text" id="userInput" placeholder="Ask Farman Kisan AI..." required
                         class="w-full bg-transparent border-none focus:outline-none text-xs md:text-sm text-slate-200 placeholder-slate-500 py-2 px-1">
 
-                    <!-- Right Controls (Voice Mic & Voice Assistant Button) -->
                     <div class="flex items-center space-x-1.5 ml-1 shrink-0">
-                        <!-- Mic Button -->
                         <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Input">
                             <i class="fa-solid fa-microphone text-sm"></i>
                         </button>
 
-                        <!-- ChatGPT Live Voice Mode Button -->
                         <button type="button" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition" title="Voice Assistant Mode">
                             <i class="fa-solid fa-waveform text-sm animate-pulse"></i>
                         </button>
 
-                        <!-- Submit Button -->
                         <button type="submit" id="sendBtn" class="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition shadow-md">
                             <i class="fa-solid fa-arrow-up text-xs"></i>
                         </button>
@@ -245,17 +238,30 @@
     <script>
         let currentSessionId = null;
         let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions')) || [];
-        let currentUser = JSON.parse(localStorage.getItem('fkh_user')) || null;
+        let currentUser = null;
         let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
         const MAX_GUEST_LIMIT = 5;
         let authMode = 'signin';
         let isVoiceActive = false;
         let selectedImageData = null;
 
-        window.onload = function() {
-            updateUserUI();
+        // Auto-Detect & Load User Session on Startup
+        document.addEventListener("DOMContentLoaded", function() {
+            checkStoredUser();
             renderHistoryList();
-        };
+        });
+
+        function checkStoredUser() {
+            const savedUser = localStorage.getItem('fkh_user');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                } catch (e) {
+                    currentUser = null;
+                }
+            }
+            updateUserUI();
+        }
 
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -299,21 +305,34 @@
         function updateUserUI() {
             const guestBadge = document.getElementById('guestLimitBadge');
             const guestText = document.getElementById('guestCountText');
+            const inputField = document.getElementById('userInput');
 
-            if (currentUser) {
+            if (currentUser && currentUser.id) {
                 document.getElementById('userNameDisplay').innerText = currentUser.name || currentUser.email.split('@')[0];
                 document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
                 document.getElementById('authBtn').innerText = 'Sign Out';
                 document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
                 guestBadge.classList.add('hidden');
+                
+                inputField.disabled = false;
+                inputField.placeholder = "Ask Farman Kisan AI...";
             } else {
                 document.getElementById('userNameDisplay').innerText = 'Guest User';
                 document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
                 document.getElementById('authBtn').innerText = 'Sign In';
                 document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
                 guestBadge.classList.remove('hidden');
+                
                 const remaining = Math.max(0, MAX_GUEST_LIMIT - guestMessageCount);
                 guestText.innerText = `${remaining} Free Left`;
+
+                if (guestMessageCount >= MAX_GUEST_LIMIT) {
+                    inputField.disabled = true;
+                    inputField.placeholder = "Free limit reached. Sign In to continue.";
+                } else {
+                    inputField.disabled = false;
+                    inputField.placeholder = "Ask Farman Kisan AI...";
+                }
             }
         }
 
@@ -345,16 +364,15 @@
             e.preventDefault();
             const email = document.getElementById('authEmail').value;
             const name = document.getElementById('authName').value || email.split('@')[0];
-            const userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
+            
+            // Check if user ID already exists, otherwise create new
+            let userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
             
             currentUser = { name, email, id: userId };
             localStorage.setItem('fkh_user', JSON.stringify(currentUser));
             
             updateUserUI();
             toggleAuthModal();
-            
-            document.getElementById('userInput').disabled = false;
-            document.getElementById('userInput').placeholder = "Ask Farman Kisan AI...";
         }
 
         function logoutUser() {
