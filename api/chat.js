@@ -37,6 +37,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
+    // Free-tier friendly models (zyada daily quota), 3.8-flash hata diya (uska limit sirf 20/day hai)
     const modelsToTry = [
       "gemini-2.5-flash-lite",
       "gemini-flash-lite-latest",
