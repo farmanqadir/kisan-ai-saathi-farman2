@@ -1,20 +1,17 @@
-const VERSION = "v10-complete-answers-retry";
+const VERSION = "v11-bulletproof-ultra-fast";
 
-// Diversity Models Pool (Lite + Flash + Latest + Pro)
+// Sirf 3 Sabse Tez & Fast Models (No Heavy Models, No Quota Waste)
 const MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
-  "gemini-flash-latest",
-  "gemini-3.7-flash",
   "gemini-3.1-flash-lite",
-  "gemini-pro-latest",
+  "gemini-3.5-flash",
 ];
 
-// ---------- SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 800;     // Complete & detailed answers (Urdu/Roman Urdu friendly)
-const PER_MODEL_TIMEOUT_MS = 3500; // 3.5 sec timeout per model
-const MAX_MESSAGE_CHARS = 1200;
-const MAX_HISTORY = 10;            // Keeps full context for accurate follow-ups
+// ---------- BULLETPROOF SETTINGS ----------
+const MAX_OUTPUT_TOKENS = 400;     // Mukammal (complete) sentences ke liye perfect limit
+const PER_MODEL_TIMEOUT_MS = 2200; // 2.2 sec strict timeout per model (Ultra fast speed)
+const MAX_MESSAGE_CHARS = 1000;
+const MAX_HISTORY = 6;             // Chhota prompt = Sub-second response time
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -27,13 +24,9 @@ SCOPE RULE:
 
 ANSWER RULE:
 - Give short, concise, accurate, and COMPLETE answers (2 to 4 full sentences).
-- ALWAYS complete your sentences fully. Never leave an answer cut off or incomplete.
+- ALWAYS complete your sentences fully. Never leave an answer cut off.
 - Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#).
 - Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
@@ -49,7 +42,7 @@ async function callSingleModel(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.3,
+          temperature: 0.2, // Fast, deterministic replies
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       }),
@@ -65,10 +58,11 @@ async function callSingleModel(model, apiKey, contents) {
     }
 
     const errMsg = data?.error?.message || `HTTP ${response.status}`;
-    return { ok: false, err: errMsg };
+    const isRateLimit = response.status === 429 || /quota|rate limit/i.test(errMsg);
+    return { ok: false, err: errMsg, isRateLimit: isRateLimit };
   } catch (e) {
     const isTimeout = e.name === "AbortError";
-    return { ok: false, err: isTimeout ? "timeout" : e.message };
+    return { ok: false, err: isTimeout ? "timeout" : e.message, isTimeout: isTimeout };
   } finally {
     clearTimeout(timer);
   }
@@ -131,28 +125,24 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Multi-pass Auto Retry Loop (Pass 1 fast -> Pass 2 fallback after 400ms)
+    // Sequential Fast Execution (Max 3 attempts, Stops on First Success)
     let result = null;
     let usedModel = null;
     const errors = [];
 
-    for (let pass = 1; pass <= 2 && !result; pass++) {
-      if (pass === 2) await sleep(400); // Wait for temporary Google traffic spike to clear
-
-      for (const model of MODELS) {
-        const attempt = await callSingleModel(model, apiKey, formattedContents);
-        if (attempt.ok) {
-          result = attempt;
-          usedModel = model;
-          break;
-        }
-        errors.push(`P${pass}-${model}: ${attempt.err}`);
+    for (const model of MODELS) {
+      const attempt = await callSingleModel(model, apiKey, formattedContents);
+      if (attempt.ok) {
+        result = attempt;
+        usedModel = model;
+        break; // Instant success! Exit loop immediately.
       }
+      errors.push(`${model}: ${attempt.err}`);
     }
 
     if (!result) {
       return res.status(200).json({
-        reply: "AI server abhi thoda busy hai. Please 10 second baad dobara try karein.",
+        reply: "Server busy. Please try again in 5 seconds.",
         debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
