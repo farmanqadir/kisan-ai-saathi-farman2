@@ -14,7 +14,6 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        /* Typing dots animation */
         .typing-dots span { height: 6px; width: 6px; float: left; margin: 0 1px; background-color: #94a3b8; border-radius: 50%; display: inline-block; animation: bounce 1.3s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: -1.1s; }
         .typing-dots span:nth-child(3) { animation-delay: -0.9s; }
@@ -78,7 +77,8 @@
                         <p id="userIdDisplay" class="text-[9px] text-slate-500 truncate">ID: Not Logged In</p>
                     </div>
                 </div>
-                <button id="authBtn" onclick="toggleAuthModal()" class="text-[11px] bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-medium shrink-0">
+                <!-- AUTH ACTION BUTTON -->
+                <button id="authBtn" onclick="handleAuthButtonClick()" class="text-[11px] bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition font-medium shrink-0">
                     Sign In
                 </button>
             </div>
@@ -203,7 +203,7 @@
         </div>
     </main>
 
-    <!-- Auth Modal -->
+    <!-- Auth Modal (Sign In / Sign Up) -->
     <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
             <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
@@ -214,46 +214,194 @@
                 <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                     <i class="fa-solid fa-leaf text-xs"></i>
                 </div>
-                <h3 class="text-sm font-bold text-slate-100">Farman Kisan Portal</h3>
+                <h3 id="authModalTitle" class="text-sm font-bold text-slate-100">Sign In to Farman Kisan</h3>
             </div>
 
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-3">
-                <button id="tabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition">Sign In</button>
-                <button id="tabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition">Sign Up</button>
-            </div>
-
-            <p class="text-[11px] text-slate-400 mb-3">Sign in to unlock unlimited AI chats and save history.</p>
+            <p class="text-[11px] text-slate-400 mb-3">Sign in or sign up to sync your chat history securely across devices.</p>
             
-            <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
-                <div id="nameField" class="hidden">
+            <!-- AUTH FORM -->
+            <form onsubmit="handleAuthSubmitForm(event)" class="space-y-3">
+                <div id="nameFieldContainer" class="hidden">
                     <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                    <input type="text" id="authName" placeholder="Farman Ali" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <input type="text" id="authNameInput" placeholder="Farman Ali" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Gmail / Email</label>
-                    <input type="email" id="authEmail" required placeholder="kisan@gmail.com" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Username / Email</label>
+                    <input type="text" id="authUsernameInput" required placeholder="kisan_user" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
-                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <input type="password" id="authPasswordInput" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
                 </div>
 
+                <!-- SUBMIT BUTTON -->
                 <button type="submit" id="authSubmitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-emerald-600/20 mt-1">
                     Sign In
                 </button>
+
+                <div class="text-center pt-2">
+                    <button type="button" onclick="toggleAuthModeType()" id="authSwitchText" class="text-[11px] text-emerald-400 hover:underline">
+                        Don't have an account? Sign Up
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Script Logic -->
     <script>
+        // ==========================================
+        // 1. AUTHENTICATION & DATABASE SYNC HELPERS
+        // ==========================================
+        const AUTH_TOKEN_KEY = "kisan_auth_token";
+
+        async function apiAuth(action, data = {}) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+            try {
+                const res = await fetch("/api/auth", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": token ? "Bearer " + token : ""
+                    },
+                    body: JSON.stringify({ action, token, ...data })
+                });
+                return await res.json();
+            } catch (err) {
+                return { ok: false, error: "Network error: " + err.message };
+            }
+        }
+
+        async function apiHistory(action, data = {}) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+            if (!token) return { ok: false, error: "Not logged in" };
+            try {
+                const res = await fetch("/api/history", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({ action, ...data })
+                });
+                return await res.json();
+            } catch (err) {
+                return { ok: false, error: "Network error: " + err.message };
+            }
+        }
+
+        // ==========================================
+        // 2. SIGN IN / SIGN UP FUNCTIONS
+        // ==========================================
+        async function userSignUp(emailOrUsername, password, name = "") {
+            if (!emailOrUsername || !password) {
+                alert("Please enter username/email and password.");
+                return;
+            }
+            const res = await apiAuth("signup", { username: emailOrUsername, password, name });
+            if (res.ok && res.token) {
+                localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+                alert("Account created successfully! Welcome " + (res.user.name || res.user.id));
+                await syncUserHistoryOnLogin();
+                updateUIAuthStatus(res.user);
+                toggleAuthModal();
+            } else {
+                alert("Sign Up Error: " + (res.error || "Failed to register"));
+            }
+        }
+
+        async function userSignIn(emailOrUsername, password) {
+            if (!emailOrUsername || !password) {
+                alert("Please enter username/email and password.");
+                return;
+            }
+            const res = await apiAuth("login", { username: emailOrUsername, password });
+            if (res.ok && res.token) {
+                localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+                alert("Signed in successfully!");
+                await syncUserHistoryOnLogin();
+                updateUIAuthStatus(res.user);
+                toggleAuthModal();
+            } else {
+                alert("Sign In Error: " + (res.error || "Invalid credentials"));
+            }
+        }
+
+        async function userSignOut() {
+            await apiAuth("logout");
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            alert("Signed out!");
+            updateUIAuthStatus(null);
+            renderHistoryList();
+        }
+
+        async function checkCurrentSession() {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token) {
+                updateUIAuthStatus(null);
+                return;
+            }
+            const res = await apiAuth("me");
+            if (res.ok && res.user) {
+                updateUIAuthStatus(res.user);
+                await loadHistoryFromCloud();
+            } else {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                updateUIAuthStatus(null);
+            }
+        }
+
+        // ==========================================
+        // 3. CLOUD HISTORY SYNCING
+        // ==========================================
+        async function syncUserHistoryOnLogin() {
+            try {
+                const localChatsRaw = localStorage.getItem("kisan_chat_history") || localStorage.getItem("fkh_chat_sessions") || "[]";
+                const localChats = JSON.parse(localChatsRaw);
+                if (Array.isArray(localChats) && localChats.length > 0) {
+                    await apiHistory("import", { chats: localChats });
+                }
+            } catch (e) {
+                console.log("Import local history error:", e);
+            }
+            await loadHistoryFromCloud();
+        }
+
+        async function loadHistoryFromCloud() {
+            const res = await apiHistory("list");
+            if (res.ok && Array.isArray(res.chats)) {
+                allSessions = res.chats;
+                localStorage.setItem("kisan_chat_history", JSON.stringify(allSessions));
+                localStorage.setItem("fkh_chat_sessions", JSON.stringify(allSessions));
+                renderHistoryList();
+            }
+        }
+
+        async function saveChatToCloudAndLocal(chatObject) {
+            try {
+                const idx = allSessions.findIndex(c => c.id === chatObject.id);
+                if (idx >= 0) allSessions[idx] = chatObject;
+                else allSessions.unshift(chatObject);
+                localStorage.setItem("kisan_chat_history", JSON.stringify(allSessions));
+                localStorage.setItem("fkh_chat_sessions", JSON.stringify(allSessions));
+            } catch(e) {}
+
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (token) {
+                await apiHistory("save", { chat: chatObject });
+            }
+        }
+
+        // ==========================================
+        // 4. CHAT & UI LOGIC
+        // ==========================================
         let currentChatId = null;
         let messages = [];
-        let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions')) || [];
+        let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions') || localStorage.getItem('kisan_chat_history')) || [];
         let currentUser = null;
         let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
         const MAX_GUEST_LIMIT = 5;
-        let authMode = 'signin';
+        let isSignupView = false;
         let isVoiceActive = false;
         let isSending = false;
         let selectedImageData = null;
@@ -265,7 +413,7 @@
         const sendBtn = document.getElementById('sendBtn');
 
         document.addEventListener("DOMContentLoaded", function() {
-            checkStoredUser();
+            checkCurrentSession();
             renderHistoryList();
             initSpeechRecognition();
         });
@@ -278,7 +426,6 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // ===== Settings & Effects =====
         const MAX_INPUT_CHARS = 1000;
         const TOKEN_DELAY_MS = 20;
 
@@ -339,8 +486,8 @@
         async function sendMessage() {
             if (isSending) return;
 
-            // Check Guest Limit
-            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (!token && guestMessageCount >= MAX_GUEST_LIMIT) {
                 alert("Free limit reached! Please Sign In / Sign Up to continue chatting.");
                 toggleAuthModal();
                 return;
@@ -358,14 +505,14 @@
                 return;
             }
             if (text.length > MAX_INPUT_CHARS) {
-                showInputWarning('Message too long. Maximum ' + MAX_INPUT_CHARS + ' characters allowed (you typed ' + text.length + ').');
+                showInputWarning('Message too long. Maximum ' + MAX_INPUT_CHARS + ' characters allowed.');
                 return;
             }
 
-            if (!currentUser) {
+            if (!token) {
                 guestMessageCount++;
                 localStorage.setItem('fkh_guest_count', guestMessageCount.toString());
-                updateUserUI();
+                updateUIAuthStatus(currentUser);
             }
 
             isSending = true;
@@ -379,7 +526,6 @@
             saveCurrentChat();
             chatInput.value = '';
 
-            const currentImage = selectedImageData;
             removeSelectedImage();
 
             const row = document.createElement('div');
@@ -397,18 +543,9 @@
                 });
 
                 const data = await res.json();
-                const reply = (data && data.reply) ? data.reply : 'Maazrat, jawab nahi mil saka. Dobara koshish karein.';
+                const reply = (data && data.reply) ? data.reply : 'Maazrat, jawab nahi mil saka.';
 
                 await typeTokensEffect(bubble, reply);
-
-                if (data && data.tokens && data.tokens.total) {
-                    const meta = document.createElement('div');
-                    meta.className = 'token-info';
-                    meta.style.cssText = 'font-size:11px;opacity:.65;margin-top:6px;';
-                    meta.textContent = 'Tokens: ' + data.tokens.answer + ' (answer) | ' + data.tokens.total + ' (total)';
-                    bubble.appendChild(meta);
-                    scrollBottom();
-                }
 
                 messages.push({ role: 'assistant', content: reply });
                 saveCurrentChat();
@@ -421,12 +558,6 @@
                 if (sendBtn) sendBtn.disabled = false;
                 chatInput.focus();
             }
-
-            if (!currentUser && guestMessageCount >= MAX_GUEST_LIMIT) {
-                chatInput.disabled = true;
-                chatInput.placeholder = "Free limit reached. Sign In to continue.";
-                setTimeout(() => toggleAuthModal(), 1000);
-            }
         }
 
         function saveCurrentChat() {
@@ -435,13 +566,18 @@
             const title = firstMsg.length > 25 ? firstMsg.substring(0, 25) + '...' : firstMsg;
             const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
+            let chatObj;
             if (session) {
                 session.messages = [...messages];
                 session.title = title;
+                chatObj = session;
             } else {
-                allSessions.unshift({ id: currentChatId, title, timestamp, messages: [...messages] });
+                chatObj = { id: currentChatId, title, timestamp, messages: [...messages] };
+                allSessions.unshift(chatObj);
             }
-            localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
+            
+            // Call Cloud & Local Save helper directly
+            saveChatToCloudAndLocal(chatObj);
             renderHistoryList();
         }
 
@@ -467,7 +603,7 @@
                     chatInput.value = transcript;
                 };
 
-                recognition.onerror = function(event) { stopVoiceRecording(); };
+                recognition.onerror = function() { stopVoiceRecording(); };
                 recognition.onend = function() { stopVoiceRecording(); };
             }
         }
@@ -489,14 +625,6 @@
             if (recognition) recognition.stop();
             document.getElementById('voiceStatusBox').classList.add('hidden');
             document.getElementById('micIcon').classList.remove('text-rose-500', 'animate-pulse');
-        }
-
-        function checkStoredUser() {
-            const savedUser = localStorage.getItem('fkh_user');
-            if (savedUser) {
-                try { currentUser = JSON.parse(savedUser); } catch (e) { currentUser = null; }
-            }
-            updateUserUI();
         }
 
         function toggleMobileSidebar() {
@@ -534,15 +662,15 @@
             document.getElementById('imagePreviewBox').classList.remove('flex');
         }
 
-        function updateUserUI() {
+        function updateUIAuthStatus(user) {
+            currentUser = user;
             const guestBadge = document.getElementById('guestLimitBadge');
             const guestText = document.getElementById('guestCountText');
 
-            if (currentUser && currentUser.id) {
-                document.getElementById('userNameDisplay').innerText = currentUser.name || currentUser.email.split('@')[0];
-                document.getElementById('userIdDisplay').innerText = `ID: ${currentUser.id}`;
+            if (user) {
+                document.getElementById('userNameDisplay').innerText = user.name || user.username || "Kisan User";
+                document.getElementById('userIdDisplay').innerText = `ID: ${user.id || 'Active'}`;
                 document.getElementById('authBtn').innerText = 'Sign Out';
-                document.getElementById('authBtn').setAttribute('onclick', 'logoutUser()');
                 guestBadge.classList.add('hidden');
                 chatInput.disabled = false;
                 chatInput.placeholder = "Ask Farman Kisan AI...";
@@ -550,7 +678,6 @@
                 document.getElementById('userNameDisplay').innerText = 'Guest User';
                 document.getElementById('userIdDisplay').innerText = 'ID: Not Logged In';
                 document.getElementById('authBtn').innerText = 'Sign In';
-                document.getElementById('authBtn').setAttribute('onclick', 'toggleAuthModal()');
                 guestBadge.classList.remove('hidden');
                 
                 const remaining = Math.max(0, MAX_GUEST_LIMIT - guestMessageCount);
@@ -566,48 +693,50 @@
             }
         }
 
+        function handleAuthButtonClick() {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (token) {
+                userSignOut();
+            } else {
+                toggleAuthModal();
+            }
+        }
+
         function toggleAuthModal() {
             document.getElementById('authModal').classList.toggle('hidden');
         }
 
-        function switchAuthTab(mode) {
-            authMode = mode;
-            const tabSignIn = document.getElementById('tabSignIn');
-            const tabSignUp = document.getElementById('tabSignUp');
-            const nameField = document.getElementById('nameField');
+        function toggleAuthModeType() {
+            isSignupView = !isSignupView;
+            const titleEl = document.getElementById('authModalTitle');
+            const nameContainer = document.getElementById('nameFieldContainer');
             const submitBtn = document.getElementById('authSubmitBtn');
+            const switchBtn = document.getElementById('authSwitchText');
 
-            if (mode === 'signup') {
-                tabSignUp.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
-                tabSignIn.className = "flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-                nameField.classList.remove('hidden');
-                submitBtn.innerText = "Create Account";
+            if (isSignupView) {
+                titleEl.innerText = "Create Kisan Account";
+                nameContainer.classList.remove('hidden');
+                submitBtn.innerText = "Sign Up";
+                switchBtn.innerText = "Already have an account? Sign In";
             } else {
-                tabSignIn.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition";
-                tabSignUp.className = "flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-                nameField.classList.add('hidden');
+                titleEl.innerText = "Sign In to Farman Kisan";
+                nameContainer.classList.add('hidden');
                 submitBtn.innerText = "Sign In";
+                switchBtn.innerText = "Don't have an account? Sign Up";
             }
         }
 
-        function handleAuthSubmit(e) {
+        function handleAuthSubmitForm(e) {
             e.preventDefault();
-            const email = document.getElementById('authEmail').value;
-            const name = document.getElementById('authName').value || email.split('@')[0];
-            const userId = 'FKH-USER-' + Math.floor(100000 + Math.random() * 900000);
-            
-            currentUser = { name, email, id: userId };
-            localStorage.setItem('fkh_user', JSON.stringify(currentUser));
-            
-            updateUserUI();
-            toggleAuthModal();
-        }
+            const email = document.getElementById('authUsernameInput').value.trim();
+            const pass = document.getElementById('authPasswordInput').value.trim();
+            const name = document.getElementById('authNameInput')?.value.trim() || "";
 
-        function logoutUser() {
-            localStorage.removeItem('fkh_user');
-            currentUser = null;
-            updateUserUI();
-            startNewChat();
+            if (isSignupView) {
+                userSignUp(email, pass, name);
+            } else {
+                userSignIn(email, pass);
+            }
         }
 
         function usePrompt(text) {
@@ -659,10 +788,11 @@
         function deleteSession(e, id) {
             e.stopPropagation();
             allSessions = allSessions.filter(s => s.id !== id);
+            localStorage.setItem('kisan_chat_history', JSON.stringify(allSessions));
+            localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
             if (currentChatId === id) {
                 startNewChat();
             } else {
-                localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
                 renderHistoryList();
             }
         }
