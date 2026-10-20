@@ -1,18 +1,17 @@
-const VERSION = "v7-fast-no-thinking";
+const VERSION = "v8-ultra-fast-race";
 
-// Gemini 3.x Models (Fastest Free Tier Models)
+// Gemini Fast Models List
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.8-flash",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.6-flash",
 ];
 
-// ---------- SPEED & VALIDATION SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 250;     // Fast reply ke liye short token limit
-const PER_CALL_TIMEOUT_MS = 3500;  // 3.5 sec timeout per model (fast fallback)
+const MAX_OUTPUT_TOKENS = 200; // Ultra short response for instant speed
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 10;            // Fast prompt processing
+const MAX_HISTORY = 6;         // Light prompt payload = sub-second response
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -20,28 +19,21 @@ const SYSTEM_PROMPT = `You are Farman Kisan Hub AI Assistant, an expert agricult
 
 SCOPE RULE:
 - You ONLY answer questions related to agriculture, farming, crops, livestock, soil, fertilizers, pesticides, irrigation, weather for farming, and farm machinery.
-- If user greets (hi, hello, salam), respond warmly in 1 line offering farming help.
-- If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
+- If user greets (hi, hello, salam), respond warmly in 1 short line.
+- If message is UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
 ANSWER RULE:
-- Give extremely short, direct, precise answers (2 to 3 sentences max).
-- NO markdown formatting (no bold **, no stars *, no hashtags #).
-- NEVER output internal reasoning or thinking. Answer directly in the user's language (Roman Urdu, Urdu, or English).`;
+- Give extremely short, direct, precise answers (1 to 3 sentences max).
+- Absolutely NO markdown formatting (no bold **, no stars *, no hashtags #).
+- Answer directly in the user's language (Roman Urdu, Urdu, or English).`;
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function callGeminiFast(model, apiKey, contents) {
+// Single Model Call
+async function callSingleModel(model, apiKey, contents, timeoutMs) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PER_CALL_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      model +
-      ":generateContent?key=" +
-      apiKey;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -50,9 +42,8 @@ async function callGeminiFast(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.2, // Fast, direct deterministic answers
+          temperature: 0.2,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
-          thinkingConfig: { thinkingBudget: 0 }, // CRITICAL: Turns off thinking overhead for Gemini 3.x!
         },
       }),
       signal: controller.signal,
@@ -63,17 +54,55 @@ async function callGeminiFast(model, apiKey, contents) {
     const text = parts.map((p) => p.text || "").join("").trim();
 
     if (response.ok && text) {
-      return { ok: true, text: text, usage: data.usageMetadata || null };
+      return { ok: true, model: model, text: text, usage: data.usageMetadata || null };
     }
 
-    const err = data?.error?.message || "HTTP " + response.status;
-    return { ok: false, err: err };
+    const errMsg = data?.error?.message || `HTTP ${response.status}`;
+    return { ok: false, model: model, err: errMsg };
   } catch (e) {
     const isTimeout = e.name === "AbortError";
-    return { ok: false, err: isTimeout ? "timeout" : e.message };
+    return { ok: false, model: model, err: isTimeout ? `timeout (${timeoutMs}ms)` : e.message };
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Parallel Race Engine: Jo Sabse Pehle Answer Dega Wahi Win Karega!
+async function raceModels(apiKey, contents) {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const errors = [];
+    let completedCount = 0;
+
+    MODELS.forEach((model, index) => {
+      // Staggered Parallel Execution (0ms, 500ms, 1000ms...)
+      setTimeout(async () => {
+        if (resolved) return;
+
+        const res = await callSingleModel(model, apiKey, contents, 4000);
+        completedCount++;
+
+        if (res.ok && !resolved) {
+          resolved = true;
+          resolve(res);
+        } else if (!res.ok) {
+          errors.push(`${res.model}: ${res.err}`);
+          if (completedCount === MODELS.length && !resolved) {
+            resolved = true;
+            resolve({ ok: false, err: errors.join(" || ") });
+          }
+        }
+      }, index * 500);
+    });
+
+    // Global Fallback Timeout (5 Seconds Max)
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve({ ok: false, err: errors.length ? errors.join(" || ") : "Global timeout (5000ms)" });
+      }
+    }, 5000);
+  });
 }
 
 module.exports = async function handler(req, res) {
@@ -95,7 +124,6 @@ module.exports = async function handler(req, res) {
   const startTime = Date.now();
 
   try {
-    // 1. Input Validation
     let body;
     try {
       body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -123,10 +151,9 @@ module.exports = async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: "Configuration Error: API Key missing." });
+      return res.status(200).json({ reply: "Configuration Error: API Key missing in Vercel." });
     }
 
-    // 2. Prepare Payload (Last 10 messages for maximum response speed)
     const history = messages.slice(-MAX_HISTORY);
     while (history.length && history[0].role !== "user") history.shift();
 
@@ -135,31 +162,19 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // 3. Fast Execution (Try models sequentially with 3.5s hard timeout)
-    let result = null;
-    let usedModel = null;
-    const errors = [];
+    // Launch Parallel Race
+    const raceResult = await raceModels(apiKey, formattedContents);
 
-    for (const model of MODELS) {
-      const resAttempt = await callGeminiFast(model, apiKey, formattedContents);
-      if (resAttempt.ok) {
-        result = resAttempt;
-        usedModel = model;
-        break;
-      }
-      errors.push(model + ": " + resAttempt.err);
-    }
-
-    // 4. Handle Failure Fallback
-    if (!result) {
+    if (!raceResult.ok) {
       return res.status(200).json({
-        reply: "AI server abhi busy hai. Please 30 second baad dobara koshish karein.",
-        debug: errors.join(" || "),
+        reply: "AI server busy. Please retry in a few seconds.",
+        debug: raceResult.err,
+        tookMs: Date.now() - startTime,
+        version: VERSION,
       });
     }
 
-    // 5. Agriculture Filter & Output Cleaning
-    let cleanReply = result.text
+    let cleanReply = raceResult.text
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
       .replace(/#/g, "")
@@ -171,17 +186,15 @@ module.exports = async function handler(req, res) {
       cleanReply = OFF_TOPIC_MESSAGE;
     }
 
-    const tokens = {
-      prompt: result.usage?.promptTokenCount || 0,
-      answer: result.usage?.candidatesTokenCount || 0,
-      total: result.usage?.totalTokenCount || 0,
-    };
-
     return res.status(200).json({
       reply: cleanReply,
       offTopic: offTopic,
-      tokens: tokens,
-      model: usedModel,
+      tokens: {
+        prompt: raceResult.usage?.promptTokenCount || 0,
+        answer: raceResult.usage?.candidatesTokenCount || 0,
+        total: raceResult.usage?.totalTokenCount || 0,
+      },
+      model: raceResult.model,
       tookMs: Date.now() - startTime,
       version: VERSION,
     });
