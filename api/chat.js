@@ -1,17 +1,18 @@
-const VERSION = "v8-ultra-fast-race";
+const VERSION = "v9-permanent-fix";
 
-// Gemini Fast Models List
+// Stable & Generous Quota Models (Sequential Order)
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.1-flash-lite-preview",
+  "gemini-3.7-flash",
   "gemini-3.6-flash",
 ];
 
-const MAX_OUTPUT_TOKENS = 200; // Ultra short response for instant speed
+const MAX_OUTPUT_TOKENS = 250;
+const PER_MODEL_TIMEOUT_MS = 3000; // 3 sec max per model
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 6;         // Light prompt payload = sub-second response
+const MAX_HISTORY = 6;             // Light payload for instant processing
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -27,10 +28,13 @@ ANSWER RULE:
 - Absolutely NO markdown formatting (no bold **, no stars *, no hashtags #).
 - Answer directly in the user's language (Roman Urdu, Urdu, or English).`;
 
-// Single Model Call
-async function callSingleModel(model, apiKey, contents, timeoutMs) {
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -54,55 +58,17 @@ async function callSingleModel(model, apiKey, contents, timeoutMs) {
     const text = parts.map((p) => p.text || "").join("").trim();
 
     if (response.ok && text) {
-      return { ok: true, model: model, text: text, usage: data.usageMetadata || null };
+      return { ok: true, text: text, usage: data.usageMetadata || null };
     }
 
     const errMsg = data?.error?.message || `HTTP ${response.status}`;
-    return { ok: false, model: model, err: errMsg };
+    return { ok: false, err: errMsg };
   } catch (e) {
     const isTimeout = e.name === "AbortError";
-    return { ok: false, model: model, err: isTimeout ? `timeout (${timeoutMs}ms)` : e.message };
+    return { ok: false, err: isTimeout ? "timeout" : e.message };
   } finally {
     clearTimeout(timer);
   }
-}
-
-// Parallel Race Engine: Jo Sabse Pehle Answer Dega Wahi Win Karega!
-async function raceModels(apiKey, contents) {
-  return new Promise((resolve) => {
-    let resolved = false;
-    const errors = [];
-    let completedCount = 0;
-
-    MODELS.forEach((model, index) => {
-      // Staggered Parallel Execution (0ms, 500ms, 1000ms...)
-      setTimeout(async () => {
-        if (resolved) return;
-
-        const res = await callSingleModel(model, apiKey, contents, 4000);
-        completedCount++;
-
-        if (res.ok && !resolved) {
-          resolved = true;
-          resolve(res);
-        } else if (!res.ok) {
-          errors.push(`${res.model}: ${res.err}`);
-          if (completedCount === MODELS.length && !resolved) {
-            resolved = true;
-            resolve({ ok: false, err: errors.join(" || ") });
-          }
-        }
-      }, index * 500);
-    });
-
-    // Global Fallback Timeout (5 Seconds Max)
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        resolve({ ok: false, err: errors.length ? errors.join(" || ") : "Global timeout (5000ms)" });
-      }
-    }, 5000);
-  });
 }
 
 module.exports = async function handler(req, res) {
@@ -162,19 +128,32 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Launch Parallel Race
-    const raceResult = await raceModels(apiKey, formattedContents);
+    // Sequential Fallback Engine (No Rate Limit Overuse)
+    let result = null;
+    let usedModel = null;
+    const errors = [];
 
-    if (!raceResult.ok) {
+    for (const model of MODELS) {
+      const attempt = await callSingleModel(model, apiKey, formattedContents);
+      if (attempt.ok) {
+        result = attempt;
+        usedModel = model;
+        break; // Primary success! Stop further requests immediately.
+      }
+      errors.push(`${model}: ${attempt.err}`);
+      await sleep(150); // Small grace delay before fallback
+    }
+
+    if (!result) {
       return res.status(200).json({
-        reply: "AI server busy. Please retry in a few seconds.",
-        debug: raceResult.err,
+        reply: "AI server is temporarily busy. Please try again in a moment.",
+        debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
       });
     }
 
-    let cleanReply = raceResult.text
+    let cleanReply = result.text
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
       .replace(/#/g, "")
@@ -190,11 +169,11 @@ module.exports = async function handler(req, res) {
       reply: cleanReply,
       offTopic: offTopic,
       tokens: {
-        prompt: raceResult.usage?.promptTokenCount || 0,
-        answer: raceResult.usage?.candidatesTokenCount || 0,
-        total: raceResult.usage?.totalTokenCount || 0,
+        prompt: result.usage?.promptTokenCount || 0,
+        answer: result.usage?.candidatesTokenCount || 0,
+        total: result.usage?.totalTokenCount || 0,
       },
-      model: raceResult.model,
+      model: usedModel,
       tookMs: Date.now() - startTime,
       version: VERSION,
     });
