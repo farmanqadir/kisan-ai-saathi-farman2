@@ -1,20 +1,18 @@
-const VERSION = "v12-permanent-bulletproof";
+const VERSION = "v13-no-thinking-delay";
 
-// Reliable Fast Models Array
+// High Quota (1500 req/day) & Fast Response Models
 const MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-3.5-flash",
   "gemini-flash-lite-latest",
+  "gemini-3.1-flash-lite",
   "gemini-flash-latest",
-  "gemini-3.7-flash",
+  "gemini-2.5-flash",
 ];
 
-// ---------- BULLETPROOF SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 350;     // Fast + Complete sentences (No cut-off)
-const PER_MODEL_TIMEOUT_MS = 7000; // 7s safety guard (Does NOT delay fast replies)
+const MAX_OUTPUT_TOKENS = 350;     // Complete sentences (under 60 words)
+const PER_MODEL_TIMEOUT_MS = 5000; // 5s safety guard
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 6;             // Small payload = Sub-second response
+const MAX_HISTORY = 6;
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -26,7 +24,7 @@ SCOPE RULE:
 - If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
 ANSWER RULE:
-- Give extremely short, precise, direct, and MUKAMMAL (COMPLETE) answers in 2 to 3 sentences maximum (under 60 words).
+- Give extremely short, precise, direct, and MUKAMMAL (COMPLETE) answers in 2 to 3 sentences maximum.
 - ALWAYS finish your final sentence completely. Never stop or cut off mid-sentence.
 - Absolutely NO markdown symbols (no stars *, no bold **, no hashtags #).
 - Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
@@ -35,24 +33,51 @@ async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
+  // 1. Primary Payload: thinkingBudget = 0 for INSTANT 0.5-second replies (disables internal reasoning delay)
+  const payloadFast = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  };
+
+  // 2. Fallback Payload: In case a model doesn't support thinkingConfig
+  const payloadStandard = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+    },
+  };
+
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const response = await fetch(url, {
+    // Try Fast Payload first
+    let response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.2, // Ultra fast deterministic response
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-        },
-      }),
+      body: JSON.stringify(payloadFast),
       signal: controller.signal,
     });
 
-    const data = await response.json();
+    let data = await response.json();
+
+    // If HTTP 400 error due to thinkingConfig parameter on older models, retry with standard payload
+    if (!response.ok && data?.error?.message && /thinking/i.test(data.error.message)) {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadStandard),
+        signal: controller.signal,
+      });
+      data = await response.json();
+    }
+
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const text = parts.map((p) => p.text || "").join("").trim();
 
@@ -127,7 +152,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Sequential Fast Execution (Stops on First Success)
+    // Sequential Execution
     let result = null;
     let usedModel = null;
     const errors = [];
@@ -144,7 +169,7 @@ module.exports = async function handler(req, res) {
 
     if (!result) {
       return res.status(200).json({
-        reply: "Server busy. Please try again in 5 seconds. (Debug: " + errors.join(" || ") + ")",
+        reply: "AI server is temporarily busy. Please try again in a few seconds.",
         debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
