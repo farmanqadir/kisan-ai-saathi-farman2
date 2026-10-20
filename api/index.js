@@ -1,18 +1,20 @@
-const VERSION = "v13-no-thinking-delay";
+const VERSION = "v14-permanent-fix-clean";
 
-// High Quota (1500 req/day) & Fast Response Models
+// Sirf Active, Non-Deprecated, High-Quota Gemini Models
 const MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-flash-lite-latest",
   "gemini-3.1-flash-lite",
-  "gemini-flash-latest",
-  "gemini-2.5-flash",
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3-flash-preview",
 ];
 
+// ---------- ULTRA FAST & STABLE SETTINGS ----------
 const MAX_OUTPUT_TOKENS = 350;     // Complete sentences (under 60 words)
-const PER_MODEL_TIMEOUT_MS = 5000; // 5s safety guard
+const PER_MODEL_TIMEOUT_MS = 3500; // 3.5s timeout per model
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 6;
+const MAX_HISTORY = 4;             // Light history payload = Sub-second ultra fast speed
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -33,51 +35,24 @@ async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
-  // 1. Primary Payload: thinkingBudget = 0 for INSTANT 0.5-second replies (disables internal reasoning delay)
-  const payloadFast = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: contents,
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
-
-  // 2. Fallback Payload: In case a model doesn't support thinkingConfig
-  const payloadStandard = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: contents,
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-    },
-  };
-
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    // Try Fast Payload first
-    let response = await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadFast),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: contents,
+        generationConfig: {
+          temperature: 0.2, // Fast, direct deterministic answers
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        },
+      }),
       signal: controller.signal,
     });
 
-    let data = await response.json();
-
-    // If HTTP 400 error due to thinkingConfig parameter on older models, retry with standard payload
-    if (!response.ok && data?.error?.message && /thinking/i.test(data.error.message)) {
-      response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadStandard),
-        signal: controller.signal,
-      });
-      data = await response.json();
-    }
-
+    const data = await response.json();
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const text = parts.map((p) => p.text || "").join("").trim();
 
@@ -152,7 +127,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Sequential Execution
+    // Sequential Fast Execution
     let result = null;
     let usedModel = null;
     const errors = [];
