@@ -1,17 +1,20 @@
-const VERSION = "v11-bulletproof-ultra-fast";
+const VERSION = "v12-permanent-bulletproof";
 
-// Sirf 3 Sabse Tez & Fast Models (No Heavy Models, No Quota Waste)
+// Reliable Fast Models Array
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-flash-latest",
+  "gemini-3.7-flash",
 ];
 
 // ---------- BULLETPROOF SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 400;     // Mukammal (complete) sentences ke liye perfect limit
-const PER_MODEL_TIMEOUT_MS = 2200; // 2.2 sec strict timeout per model (Ultra fast speed)
+const MAX_OUTPUT_TOKENS = 350;     // Fast + Complete sentences (No cut-off)
+const PER_MODEL_TIMEOUT_MS = 7000; // 7s safety guard (Does NOT delay fast replies)
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 6;             // Chhota prompt = Sub-second response time
+const MAX_HISTORY = 6;             // Small payload = Sub-second response
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -23,9 +26,9 @@ SCOPE RULE:
 - If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
 ANSWER RULE:
-- Give short, concise, accurate, and COMPLETE answers (2 to 4 full sentences).
-- ALWAYS complete your sentences fully. Never leave an answer cut off.
-- Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#).
+- Give extremely short, precise, direct, and MUKAMMAL (COMPLETE) answers in 2 to 3 sentences maximum (under 60 words).
+- ALWAYS finish your final sentence completely. Never stop or cut off mid-sentence.
+- Absolutely NO markdown symbols (no stars *, no bold **, no hashtags #).
 - Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
 
 async function callSingleModel(model, apiKey, contents) {
@@ -42,7 +45,7 @@ async function callSingleModel(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.2, // Fast, deterministic replies
+          temperature: 0.2, // Ultra fast deterministic response
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       }),
@@ -58,11 +61,10 @@ async function callSingleModel(model, apiKey, contents) {
     }
 
     const errMsg = data?.error?.message || `HTTP ${response.status}`;
-    const isRateLimit = response.status === 429 || /quota|rate limit/i.test(errMsg);
-    return { ok: false, err: errMsg, isRateLimit: isRateLimit };
+    return { ok: false, err: errMsg };
   } catch (e) {
     const isTimeout = e.name === "AbortError";
-    return { ok: false, err: isTimeout ? "timeout" : e.message, isTimeout: isTimeout };
+    return { ok: false, err: isTimeout ? `timeout (${PER_MODEL_TIMEOUT_MS}ms)` : e.message };
   } finally {
     clearTimeout(timer);
   }
@@ -125,7 +127,7 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Sequential Fast Execution (Max 3 attempts, Stops on First Success)
+    // Sequential Fast Execution (Stops on First Success)
     let result = null;
     let usedModel = null;
     const errors = [];
@@ -142,7 +144,7 @@ module.exports = async function handler(req, res) {
 
     if (!result) {
       return res.status(200).json({
-        reply: "Server busy. Please try again in 5 seconds.",
+        reply: "Server busy. Please try again in 5 seconds. (Debug: " + errors.join(" || ") + ")",
         debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
