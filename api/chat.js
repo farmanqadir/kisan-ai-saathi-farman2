@@ -1,32 +1,35 @@
-const VERSION = "v9-permanent-fix";
+const VERSION = "v10-complete-answers-retry";
 
-// Stable & Generous Quota Models (Sequential Order)
+// Diversity Models Pool (Lite + Flash + Latest + Pro)
 const MODELS = [
   "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
+  "gemini-flash-latest",
   "gemini-3.7-flash",
-  "gemini-3.6-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-pro-latest",
 ];
 
-const MAX_OUTPUT_TOKENS = 250;
-const PER_MODEL_TIMEOUT_MS = 3000; // 3 sec max per model
-const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 6;             // Light payload for instant processing
+// ---------- SETTINGS ----------
+const MAX_OUTPUT_TOKENS = 800;     // Complete & detailed answers (Urdu/Roman Urdu friendly)
+const PER_MODEL_TIMEOUT_MS = 3500; // 3.5 sec timeout per model
+const MAX_MESSAGE_CHARS = 1200;
+const MAX_HISTORY = 10;            // Keeps full context for accurate follow-ups
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
 const SYSTEM_PROMPT = `You are Farman Kisan Hub AI Assistant, an expert agricultural advisor.
 
 SCOPE RULE:
-- You ONLY answer questions related to agriculture, farming, crops, livestock, soil, fertilizers, pesticides, irrigation, weather for farming, and farm machinery.
-- If user greets (hi, hello, salam), respond warmly in 1 short line.
-- If message is UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
+- You ONLY answer questions related to agriculture, farming, crops, livestock, soil, fertilizers, pesticides, plant diseases, irrigation, weather for farming, and farm machinery.
+- If user greets (hi, hello, salam), respond warmly in 1 short line offering farming help.
+- If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
 ANSWER RULE:
-- Give extremely short, direct, precise answers (1 to 3 sentences max).
-- Absolutely NO markdown formatting (no bold **, no stars *, no hashtags #).
-- Answer directly in the user's language (Roman Urdu, Urdu, or English).`;
+- Give short, concise, accurate, and COMPLETE answers (2 to 4 full sentences).
+- ALWAYS complete your sentences fully. Never leave an answer cut off or incomplete.
+- Do NOT use markdown symbols like stars (*), bold (**), or hashtags (#).
+- Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -46,7 +49,7 @@ async function callSingleModel(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.3,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       }),
@@ -128,25 +131,28 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Sequential Fallback Engine (No Rate Limit Overuse)
+    // Multi-pass Auto Retry Loop (Pass 1 fast -> Pass 2 fallback after 400ms)
     let result = null;
     let usedModel = null;
     const errors = [];
 
-    for (const model of MODELS) {
-      const attempt = await callSingleModel(model, apiKey, formattedContents);
-      if (attempt.ok) {
-        result = attempt;
-        usedModel = model;
-        break; // Primary success! Stop further requests immediately.
+    for (let pass = 1; pass <= 2 && !result; pass++) {
+      if (pass === 2) await sleep(400); // Wait for temporary Google traffic spike to clear
+
+      for (const model of MODELS) {
+        const attempt = await callSingleModel(model, apiKey, formattedContents);
+        if (attempt.ok) {
+          result = attempt;
+          usedModel = model;
+          break;
+        }
+        errors.push(`P${pass}-${model}: ${attempt.err}`);
       }
-      errors.push(`${model}: ${attempt.err}`);
-      await sleep(150); // Small grace delay before fallback
     }
 
     if (!result) {
       return res.status(200).json({
-        reply: "AI server is temporarily busy. Please try again in a moment.",
+        reply: "AI server abhi thoda busy hai. Please 10 second baad dobara try karein.",
         debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
