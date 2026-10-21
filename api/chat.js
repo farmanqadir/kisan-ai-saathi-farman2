@@ -1,20 +1,19 @@
-const VERSION = "v14-permanent-fix-clean";
+const VERSION = "v15-large-input-support";
 
-// Sirf Active, Non-Deprecated, High-Quota Gemini Models
+// Active Gemini Models
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
   "gemini-3.7-flash",
   "gemini-3.6-flash",
-  "gemini-3-flash-preview",
 ];
 
-// ---------- ULTRA FAST & STABLE SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 350;     // Complete sentences (under 60 words)
-const PER_MODEL_TIMEOUT_MS = 3500; // 3.5s timeout per model
-const MAX_MESSAGE_CHARS = 1000;
-const MAX_HISTORY = 4;             // Light history payload = Sub-second ultra fast speed
+// ---------- SETTINGS ----------
+const MAX_OUTPUT_TOKENS = 400;
+const PER_MODEL_TIMEOUT_MS = 4000;
+const MAX_MESSAGE_CHARS = 10000;   // Updated: 10,000 characters allowed per input
+const MAX_HISTORY = 6;
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
@@ -26,7 +25,7 @@ SCOPE RULE:
 - If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
 ANSWER RULE:
-- Give extremely short, precise, direct, and MUKAMMAL (COMPLETE) answers in 2 to 3 sentences maximum.
+- Give short, concise, accurate, and COMPLETE answers (2 to 4 full sentences).
 - ALWAYS finish your final sentence completely. Never stop or cut off mid-sentence.
 - Absolutely NO markdown symbols (no stars *, no bold **, no hashtags #).
 - Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
@@ -45,7 +44,7 @@ async function callSingleModel(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.2, // Fast, direct deterministic answers
+          temperature: 0.2,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       }),
@@ -127,7 +126,6 @@ module.exports = async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
-    // Sequential Fast Execution
     let result = null;
     let usedModel = null;
     const errors = [];
@@ -137,7 +135,7 @@ module.exports = async function handler(req, res) {
       if (attempt.ok) {
         result = attempt;
         usedModel = model;
-        break; // Instant success! Exit loop immediately.
+        break;
       }
       errors.push(`${model}: ${attempt.err}`);
     }
