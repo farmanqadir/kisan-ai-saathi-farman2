@@ -1,82 +1,89 @@
-const VERSION = "v16-expert-pakistan-diagnostic";
+const VERSION = "v17-fast-expert-diagnostic";
 
-// Active Gemini Models
+// Fast & Reliable Gemini Models
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
+  "gemini-flash-lite-latest",
+  "gemini-flash-latest",
 ];
 
-// ---------- EXPERT DIAGNOSTIC SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 1000;    // Detailed diagnostic breakdowns & calculations
-const PER_MODEL_TIMEOUT_MS = 5000; // 5s timeout
-const MAX_MESSAGE_CHARS = 10000;   // 10k input characters support
+// ---------- ULTRA FAST EXPERT SETTINGS ----------
+const MAX_OUTPUT_TOKENS = 450;     // Fast response + complete diagnostic breakdown
+const PER_MODEL_TIMEOUT_MS = 4000; // 4s strict timeout
+const MAX_MESSAGE_CHARS = 10000;   // 10,000 input chars support
 const MAX_HISTORY = 6;
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
 const SYSTEM_PROMPT = `You are Farman Kisan Hub AI Assistant, a senior expert agricultural advisor tailored specifically for Pakistani farmers (especially Punjab / South Punjab conditions).
 
-SCOPE & DOMAIN RULE:
+SCOPE RULE:
 - You ONLY answer questions related to agriculture, farming, crops, livestock, soil, fertilizers, pesticides, plant diseases, irrigation, weather for farming, and farm machinery.
 - If user greets (hi, hello, salam), respond warmly in 1 short line offering farming help.
 - If message is completely UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
-STRICT DIAGNOSTIC & ADVISORY PROTOCOL:
-For every agricultural problem, NEVER immediately recommend a fertilizer, pesticide, irrigation change, or chemical treatment. Follow this exact sequence:
+EXPERT PAKISTANI AGRICULTURAL DIAGNOSTIC PROTOCOL:
+Do NOT jump to chemical treatments or sprays immediately. Follow this structured sequence:
+1. Context Check: Identify crop, variety, stage, location (Punjab/South Punjab context), soil, water, and management history.
+2. Plausible Causes & Evidence: List top probable causes with evidence FOR and AGAINST each cause. Differentiate similar-looking symptoms.
+3. Safe & Cheap Verification First: Recommend the cheapest, safest physical check (root test, moisture check) BEFORE expensive treatments.
+4. Treatment Rationale & Calculation: Recommend treatment only after explaining evidence. When farm size/data is provided, calculate exact: (a) Per-Acre Quantity, (b) Total Quantity, and (c) Estimated Cost in PKR.
+5. Pakistani Context & Uncertainty: Use Pakistani local terminology and fertilizers. State confidence level (High/Medium/Low). If data is insufficient, explicitly state it instead of guessing. Provide a step-by-step decision tree if treatment fails.
 
-1. INFORMATION & CONTEXT IDENTIFICATION:
-   - Identify or ask for missing critical parameters: Crop type, variety, growth stage, location (Punjab/South Punjab context), soil type, irrigation water source/schedule, weather conditions, previous crop, and recent management history.
-
-2. PLAUSIBLE CAUSES & DIFFERENTIAL DIAGNOSIS:
-   - List all plausible causes and rank them by probability.
-   - For EVERY cause, provide evidence SUPPORTING it and evidence AGAINST it.
-   - Highlight any missing information that could change the diagnosis.
-   - Distinguish between symptoms that look similar but have different underlying causes (differential diagnosis).
-
-3. CHEAPEST & SAFEST VERIFICATION FIRST:
-   - Recommend the cheapest, easiest, and safest physical verification steps (e.g., root inspection, soil moisture test, checking leaf underside) BEFORE proposing any expensive treatments.
-
-4. TREATMENT RATIONALE & EXACT CALCULATIONS:
-   - Recommend treatment ONLY AFTER explaining why the evidence supports it.
-   - When sufficient data is available, calculate exact quantities:
-     * Show (a) Per-Acre Quantity, (b) Total Quantity for the farm size, and (c) Estimated Cost in PKR separately.
-
-5. LOCAL PAKISTANI CONTEXT & DECISION TREE:
-   - Tailor all advice specifically to Pakistani agricultural conditions (Punjab / South Punjab soils, canal/tube-well water, local Pakistani fertilizer/pesticide brands, and market terminology).
-   - State your confidence level (High, Medium, Low) and explicitly state uncertainty.
-   - If information is insufficient for a reliable diagnosis, explicitly say so instead of guessing.
-   - Provide a step-by-step decision tree for what should be checked next if the initial treatment fails.
-   - NEVER present an uncertain diagnosis as a confirmed fact.
-
-LANGUAGE & FORMATTING:
-- Answer strictly in the same language as the user query (Roman Urdu, Urdu, or English).
-- Do NOT use heavy markdown stars (*) or bold (**). Keep layout clean, structured, readable, and ALWAYS complete your final sentence.`;
+FORMATTING:
+- Keep the answer structured, concise, direct, and complete (under 120 words).
+- Do NOT use markdown stars (*) or bold (**). Answer in user's query language (Roman Urdu, Urdu, or English).`;
 
 async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
+  // 1. Ultra Fast Payload: thinkingBudget = 0 turns OFF internal reasoning delay for sub-second responses
+  const payloadFast = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  };
+
+  // 2. Standard Fallback Payload (In case a model doesn't support thinkingConfig)
+  const payloadStandard = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+    },
+  };
+
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.2, // Deterministic expert diagnostic response
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-        },
-      }),
+      body: JSON.stringify(payloadFast),
       signal: controller.signal,
     });
 
-    const data = await response.json();
+    let data = await response.json();
+
+    // If HTTP 400 due to thinkingConfig parameter on older models, retry instantly with standard payload
+    if (!response.ok && data?.error?.message && /thinking/i.test(data.error.message)) {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadStandard),
+        signal: controller.signal,
+      });
+      data = await response.json();
+    }
+
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const text = parts.map((p) => p.text || "").join("").trim();
 
@@ -160,7 +167,7 @@ module.exports = async function handler(req, res) {
       if (attempt.ok) {
         result = attempt;
         usedModel = model;
-        break;
+        break; // Instant success! Exit loop immediately.
       }
       errors.push(`${model}: ${attempt.err}`);
     }
