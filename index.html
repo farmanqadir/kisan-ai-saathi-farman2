@@ -250,11 +250,106 @@
 
     <!-- Script Logic -->
     <script>
-        // ==========================================
-        // 1. AUTHENTICATION & DATABASE SYNC HELPERS
-        // ==========================================
         const AUTH_TOKEN_KEY = "kisan_auth_token";
+        let userChatsList = []; // Memory array for logged-in user chats
 
+        // 1. Check if user is logged in
+        function isUserLoggedIn() {
+            return !!localStorage.getItem(AUTH_TOKEN_KEY);
+        }
+
+        // 2. Fetch full account history from Database on Login / Page Load
+        async function fetchUserCloudHistory() {
+            if (!isUserLoggedIn()) {
+                userChatsList = [];
+                localStorage.removeItem("kisan_chat_history");
+                if (typeof renderSidebarChats === "function") renderSidebarChats([]);
+                return;
+            }
+
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            try {
+                const res = await fetch("/api/history", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({ action: "list" })
+                });
+                const data = await res.json();
+                if (data.ok && Array.isArray(data.chats)) {
+                    userChatsList = data.chats;
+                    if (typeof renderSidebarChats === "function") {
+                        renderSidebarChats(userChatsList);
+                    } else {
+                        renderHistoryList();
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load user history:", err);
+            }
+        }
+
+        // 3. Save chat ONLY IF Logged In
+        async function saveChatIfLoggedIn(chatObj) {
+            if (!isUserLoggedIn()) {
+                return; // Bina login ke history save NAHI hogi
+            }
+
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            try {
+                await fetch("/api/history", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({ action: "save", chat: chatObj })
+                });
+                await fetchUserCloudHistory();
+            } catch (err) {
+                console.error("Failed to save chat to database:", err);
+            }
+        }
+
+        // 4. On Sign In Success
+        async function onLoginSuccess(token) {
+            localStorage.setItem(AUTH_TOKEN_KEY, token);
+            await fetchUserCloudHistory();
+            await checkCurrentSession();
+        }
+
+        // 5. On Sign Out Success
+        function onSignOut() {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.removeItem("kisan_chat_history");
+            userChatsList = [];
+            renderHistoryList();
+            clearChatScreen();
+            updateUIAuthStatus(null);
+        }
+
+        function clearChatScreen() {
+            currentChatId = null;
+            messages = [];
+            chatMessages.innerHTML = '';
+            chatMessages.classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+        }
+
+        // Check session on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            if (isUserLoggedIn()) {
+                fetchUserCloudHistory();
+                checkCurrentSession();
+            } else {
+                onSignOut();
+            }
+            initSpeechRecognition();
+        });
+
+        // API Auth Helper
         async function apiAuth(action, data = {}) {
             const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
             try {
@@ -272,27 +367,7 @@
             }
         }
 
-        async function apiHistory(action, data = {}) {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
-            if (!token) return { ok: false, error: "Not logged in" };
-            try {
-                const res = await fetch("/api/history", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + token
-                    },
-                    body: JSON.stringify({ action, ...data })
-                });
-                return await res.json();
-            } catch (err) {
-                return { ok: false, error: "Network error: " + err.message };
-            }
-        }
-
-        // ==========================================
-        // 2. SIGN IN / SIGN UP FUNCTIONS
-        // ==========================================
+        // Sign Up & Sign In Functions
         async function userSignUp(emailOrUsername, password, name = "") {
             if (!emailOrUsername || !password) {
                 alert("Please enter username/email and password.");
@@ -300,9 +375,8 @@
             }
             const res = await apiAuth("signup", { username: emailOrUsername, password, name });
             if (res.ok && res.token) {
-                localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+                await onLoginSuccess(res.token);
                 alert("Account created successfully! Welcome " + (res.user.name || res.user.id));
-                await syncUserHistoryOnLogin();
                 updateUIAuthStatus(res.user);
                 toggleAuthModal();
             } else {
@@ -317,9 +391,8 @@
             }
             const res = await apiAuth("login", { username: emailOrUsername, password });
             if (res.ok && res.token) {
-                localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+                await onLoginSuccess(res.token);
                 alert("Signed in successfully!");
-                await syncUserHistoryOnLogin();
                 updateUIAuthStatus(res.user);
                 toggleAuthModal();
             } else {
@@ -329,10 +402,8 @@
 
         async function userSignOut() {
             await apiAuth("logout");
-            localStorage.removeItem(AUTH_TOKEN_KEY);
+            onSignOut();
             alert("Signed out!");
-            updateUIAuthStatus(null);
-            renderHistoryList();
         }
 
         async function checkCurrentSession() {
@@ -344,60 +415,16 @@
             const res = await apiAuth("me");
             if (res.ok && res.user) {
                 updateUIAuthStatus(res.user);
-                await loadHistoryFromCloud();
             } else {
-                localStorage.removeItem(AUTH_TOKEN_KEY);
-                updateUIAuthStatus(null);
+                onSignOut();
             }
         }
 
         // ==========================================
-        // 3. CLOUD HISTORY SYNCING
-        // ==========================================
-        async function syncUserHistoryOnLogin() {
-            try {
-                const localChatsRaw = localStorage.getItem("kisan_chat_history") || localStorage.getItem("fkh_chat_sessions") || "[]";
-                const localChats = JSON.parse(localChatsRaw);
-                if (Array.isArray(localChats) && localChats.length > 0) {
-                    await apiHistory("import", { chats: localChats });
-                }
-            } catch (e) {
-                console.log("Import local history error:", e);
-            }
-            await loadHistoryFromCloud();
-        }
-
-        async function loadHistoryFromCloud() {
-            const res = await apiHistory("list");
-            if (res.ok && Array.isArray(res.chats)) {
-                allSessions = res.chats;
-                localStorage.setItem("kisan_chat_history", JSON.stringify(allSessions));
-                localStorage.setItem("fkh_chat_sessions", JSON.stringify(allSessions));
-                renderHistoryList();
-            }
-        }
-
-        async function saveChatToCloudAndLocal(chatObject) {
-            try {
-                const idx = allSessions.findIndex(c => c.id === chatObject.id);
-                if (idx >= 0) allSessions[idx] = chatObject;
-                else allSessions.unshift(chatObject);
-                localStorage.setItem("kisan_chat_history", JSON.stringify(allSessions));
-                localStorage.setItem("fkh_chat_sessions", JSON.stringify(allSessions));
-            } catch(e) {}
-
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            if (token) {
-                await apiHistory("save", { chat: chatObject });
-            }
-        }
-
-        // ==========================================
-        // 4. CHAT & UI LOGIC
+        // 2. CHAT & UI LOGIC
         // ==========================================
         let currentChatId = null;
         let messages = [];
-        let allSessions = JSON.parse(localStorage.getItem('fkh_chat_sessions') || localStorage.getItem('kisan_chat_history')) || [];
         let currentUser = null;
         let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
         const MAX_GUEST_LIMIT = 5;
@@ -411,12 +438,6 @@
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
-
-        document.addEventListener("DOMContentLoaded", function() {
-            checkCurrentSession();
-            renderHistoryList();
-            initSpeechRecognition();
-        });
 
         function generateId() {
             return 'session_' + Date.now();
@@ -486,8 +507,7 @@
         async function sendMessage() {
             if (isSending) return;
 
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            if (!token && guestMessageCount >= MAX_GUEST_LIMIT) {
+            if (!isUserLoggedIn() && guestMessageCount >= MAX_GUEST_LIMIT) {
                 alert("Free limit reached! Please Sign In / Sign Up to continue chatting.");
                 toggleAuthModal();
                 return;
@@ -509,7 +529,7 @@
                 return;
             }
 
-            if (!token) {
+            if (!isUserLoggedIn()) {
                 guestMessageCount++;
                 localStorage.setItem('fkh_guest_count', guestMessageCount.toString());
                 updateUIAuthStatus(currentUser);
@@ -561,7 +581,7 @@
         }
 
         function saveCurrentChat() {
-            let session = allSessions.find(s => s.id === currentChatId);
+            let session = userChatsList.find(s => s.id === currentChatId);
             const firstMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
             const title = firstMsg.length > 25 ? firstMsg.substring(0, 25) + '...' : firstMsg;
             const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -573,11 +593,10 @@
                 chatObj = session;
             } else {
                 chatObj = { id: currentChatId, title, timestamp, messages: [...messages] };
-                allSessions.unshift(chatObj);
+                userChatsList.unshift(chatObj);
             }
             
-            // Call Cloud & Local Save helper directly
-            saveChatToCloudAndLocal(chatObj);
+            saveChatIfLoggedIn(chatObj);
             renderHistoryList();
         }
 
@@ -694,8 +713,7 @@
         }
 
         function handleAuthButtonClick() {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            if (token) {
+            if (isUserLoggedIn()) {
                 userSignOut();
             } else {
                 toggleAuthModal();
@@ -744,12 +762,13 @@
             sendMessage();
         }
 
-        function renderHistoryList() {
+        function renderHistoryList(customList = null) {
+            const listToRender = customList || userChatsList;
             const container = document.getElementById('chatHistoryList');
-            document.getElementById('historyCount').innerText = allSessions.length;
+            document.getElementById('historyCount').innerText = listToRender.length;
             container.innerHTML = '';
 
-            allSessions.forEach(session => {
+            listToRender.forEach(session => {
                 const isActive = session.id === currentChatId;
                 const div = document.createElement('div');
                 div.className = `p-2 rounded-xl text-xs cursor-pointer transition flex items-center justify-between group ${isActive ? 'bg-slate-800/90 text-slate-100 border border-slate-700' : 'text-slate-400 hover:bg-slate-900/80 hover:text-slate-200 border border-transparent'}`;
@@ -768,9 +787,13 @@
             });
         }
 
+        function renderSidebarChats(chats) {
+            renderHistoryList(chats);
+        }
+
         function loadSession(id) {
             currentChatId = id;
-            const session = allSessions.find(s => s.id === id);
+            const session = userChatsList.find(s => s.id === id);
             if (!session) return;
 
             messages = [...session.messages];
@@ -787,13 +810,10 @@
 
         function deleteSession(e, id) {
             e.stopPropagation();
-            allSessions = allSessions.filter(s => s.id !== id);
-            localStorage.setItem('kisan_chat_history', JSON.stringify(allSessions));
-            localStorage.setItem('fkh_chat_sessions', JSON.stringify(allSessions));
+            userChatsList = userChatsList.filter(s => s.id !== id);
+            renderHistoryList();
             if (currentChatId === id) {
                 startNewChat();
-            } else {
-                renderHistoryList();
             }
         }
 
