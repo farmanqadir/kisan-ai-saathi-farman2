@@ -1,6 +1,5 @@
-const VERSION = "v19-ultra-fast-26-diagnostic";
+const VERSION = "v20-structured-multilingual";
 
-// Fast & High-Quota Active Models
 const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
@@ -9,10 +8,9 @@ const MODELS = [
   "gemini-3.7-flash",
 ];
 
-// ---------- ULTRA FAST SETTINGS ----------
-const MAX_OUTPUT_TOKENS = 600;     // Fast response + full 26-point diagnostic report
-const PER_MODEL_TIMEOUT_MS = 5500; // 5.5s timeout safety guard
-const MAX_MESSAGE_CHARS = 10000;   // 10,000 chars input support
+const MAX_OUTPUT_TOKENS = 800;
+const PER_MODEL_TIMEOUT_MS = 5500;
+const MAX_MESSAGE_CHARS = 10000;
 const MAX_HISTORY = 6;
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
@@ -21,29 +19,31 @@ const SYSTEM_PROMPT = `EXPERT AGRICULTURE DIAGNOSTIC SYSTEM (PAKISTAN FOCUS)
 
 You are an evidence-based agricultural diagnostic AI. Reason like an expert agronomist, soil scientist, plant pathologist, and agricultural economist working together for Pakistani farmers (Punjab/South Punjab context).
 
+STRICT LANGUAGE CONSISTENCY RULE (CRITICAL):
+- DETECT THE LANGUAGE OF THE USER'S LAST QUERY IMMEDIATELY.
+- IF THE USER ASKS IN ENGLISH -> YOU MUST RESPOND STRICTLY AND 100% IN ENGLISH.
+- IF THE USER ASKS IN ROMAN URDU -> YOU MUST RESPOND STRICTLY IN ROMAN URDU.
+- IF THE USER ASKS IN URDU SCRIPT -> YOU MUST RESPOND STRICTLY IN URDU SCRIPT.
+- NEVER SWITCH OR MIX LANGUAGES. ALWAYS MATCH THE USER'S INPUT LANGUAGE EXACTLY.
+
 SCOPE RULE:
 - ONLY answer questions about agriculture, farming, crops, livestock, soil, fertilizers, pesticides, plant diseases, irrigation, weather, and farm machinery.
 - If user greets (hi, hello, salam), reply warmly in 1 short line offering farming help.
 - If message is UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
-26-POINT DIAGNOSTIC & ADVISORY PROTOCOL:
-1. DIAGNOSE BEFORE TREATMENT: Never jump immediately to sprays, fertilizers, or gypsum. Follow: Symptoms -> Context -> Differential Diagnosis -> Evidence -> Verification -> Treatment -> Monitoring.
-2. DIFFERENTIAL DIAGNOSIS: Rank top 3 plausible causes (Most likely, 2nd, 3rd). For each, give Evidence FOR, Evidence AGAINST, Missing Info, and Verification Test.
-3. CONFIDENCE SCORE: State confidence percentage (e.g., Nitrogen Deficiency 40%, Salinity 30%). Never fake 100% certainty.
-4. NEVER OVERDIAGNOSE: Check plant position (old vs young leaves), chlorosis pattern, roots, field distribution, irrigation, weather, and crop history.
-5. FIELD PATTERNS: Analyze spatial pattern (Uniform, Random, Patchy, Low areas, Channel borders).
-6. SOIL & WATER CHEMISTRY: Consider pH, EC, organic matter, SAR, RSC. Do NOT recommend gypsum merely for high pH/EC unless sodicity/infiltration justifies it.
-7. TEST BEFORE EXPENSIVE TREATMENT: Always recommend the cheapest, safest physical check first (root test, moisture check) or small-plot trial.
-8. EXACT CALCULATIONS: When farm size is provided, calculate: (a) Per-Acre Rate, (b) Total Farm Quantity, and (c) Estimated Cost in PKR separately. Distinguish kg nutrient vs kg fertilizer product.
-9. PAKISTANI LOCALIZATION: Tailor specifically to Pakistani soils, canal/tube-well water, local Pakistani fertilizer/pesticide brands, and market terms in PKR.
-10. DECISION TREE & MONITORING: Provide IF-THEN decision tree for treatment failure and a clear monitoring plan.
+READABILITY & STRUCTURED FORMATTING PROTOCOL:
+Format your diagnostic report cleanly using markdown structure so it is extremely easy to read:
+- Use bold section headers like **A. Problem Summary**, **B. Key Observations**, **C. Differential Diagnosis**, **D. Confidence Score**, **E. Missing Information**, **F. Safest/Cheapest Verification**, **G. Treatment & Exact Calculations (Per Acre, Total, PKR Cost)**, **H. Decision Tree & Monitoring Plan**.
+- Use bullet points (-) for listing items.
+- Put blank lines between sections for clean spacing.
 
-STRUCTURE YOUR RESPONSE CLEANLY (Use Sections A-P when applicable):
-A. Problem Summary | B. Key Observations | C. Differential Diagnosis & Evidence | D. Confidence % | E. Missing Information | F. Cheapest Verification Test | G. Immediate Low-Risk Action | H. Treatment & Exact Calculations (Per Acre, Total, PKR Cost) | I. Decision Tree & Monitoring Plan
-
-FORMATTING:
-- Do NOT use markdown stars (*) or bold (**). Keep text clean and readable.
-- Answer strictly in the same language as user query (Roman Urdu, Urdu, or English).`;
+26-POINT DIAGNOSTIC RULES:
+1. Diagnose before treatment (never jump directly to sprays).
+2. Rank top 3 probable causes with evidence FOR and AGAINST.
+3. State confidence score percentage.
+4. Recommend cheapest physical check first.
+5. Provide exact per-acre, total farm quantity, and estimated cost in PKR.
+6. Provide an IF-THEN decision tree if treatment fails.`;
 
 async function callSingleModel(model, apiKey, contents) {
   const controller = new AbortController();
@@ -59,7 +59,7 @@ async function callSingleModel(model, apiKey, contents) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: contents,
         generationConfig: {
-          temperature: 0.2, // Fast, deterministic expert response
+          temperature: 0.2,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
         },
       }),
@@ -93,11 +93,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
-    return res.status(200).json({
-      reply: "API is online.",
-      version: VERSION,
-      models: MODELS,
-    });
+    return res.status(200).json({ reply: "API is online.", version: VERSION, models: MODELS });
   }
 
   const startTime = Date.now();
@@ -150,27 +146,21 @@ module.exports = async function handler(req, res) {
       if (attempt.ok) {
         result = attempt;
         usedModel = model;
-        break; // Instant success! Exit loop immediately.
+        break;
       }
       errors.push(`${model}: ${attempt.err}`);
     }
 
     if (!result) {
-      const errorDetails = errors.join(" || ");
       return res.status(200).json({
-        reply: "AI server is temporarily busy. Please try again. (Details: " + errorDetails + ")",
-        debug: errorDetails,
+        reply: "AI server is temporarily busy. Please try again.",
+        debug: errors.join(" || "),
         tookMs: Date.now() - startTime,
         version: VERSION,
       });
     }
 
-    let cleanReply = result.text
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/#/g, "")
-      .trim();
-
+    let cleanReply = result.text.trim();
     let offTopic = false;
     if (cleanReply.toUpperCase().includes(OFF_TOPIC_TAG)) {
       offTopic = true;
