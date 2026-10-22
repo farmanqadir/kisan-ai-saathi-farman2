@@ -10,17 +10,128 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        /* Dynamic Theme Variables */
+        :root {
+          --bg-primary: #f8fafc;
+          --bg-secondary: #ffffff;
+          --text-primary: #0f172a;
+          --text-secondary: #475569;
+          --border-color: #e2e8f0;
+          --card-bg: #f1f5f9;
+          --primary-accent: #16a34a;
+        }
+
+        [data-theme="dark"] {
+          --bg-primary: #0f172a;
+          --bg-secondary: #1e293b;
+          --text-primary: #f8fafc;
+          --text-secondary: #94a3b8;
+          --border-color: #334155;
+          --card-bg: #334155;
+          --primary-accent: #22c55e;
+        }
+
+        body {
+          font-family: 'Inter', sans-serif;
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+          transition: background-color 0.3s, color 0.3s;
+        }
+
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        
         .typing-dots span { height: 6px; width: 6px; float: left; margin: 0 1px; background-color: #94a3b8; border-radius: 50%; display: inline-block; animation: bounce 1.3s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: -1.1s; }
         .typing-dots span:nth-child(3) { animation-delay: -0.9s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+        /* Formatted AI Response Styles for Maximum Readability */
+        .msg-bubble {
+          line-height: 1.6;
+          font-size: 15px;
+        }
+        .msg-bubble h3 {
+          color: var(--primary-accent);
+          margin-top: 14px;
+          margin-bottom: 6px;
+          font-size: 16px;
+          font-weight: 700;
+          border-bottom: 1px solid var(--border-color);
+          padding-bottom: 4px;
+        }
+        .msg-bubble ul {
+          padding-left: 20px;
+          margin: 8px 0;
+        }
+        .msg-bubble li {
+          margin-bottom: 4px;
+        }
+        .msg-bubble strong {
+          color: var(--text-primary);
+        }
+
+        /* Modal Styles */
+        .custom-modal {
+          display: none;
+          position: fixed;
+          top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(0,0,0,0.6);
+          backdrop-filter: blur(4px);
+          z-index: 9999;
+          align-items: center; justify-content: center;
+        }
+        .custom-modal.active { display: flex; }
+        .modal-content {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          padding: 24px;
+          width: 90%; max-width: 440px;
+          color: var(--text-primary);
+        }
+
+        /* FAQ Onboarding Chips */
+        .faq-container {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 10px;
+          margin: 20px 0;
+        }
+        .faq-chip {
+          background: var(--card-bg);
+          border: 1px solid var(--border-color);
+          padding: 12px 14px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 13px;
+          transition: transform 0.2s, border-color 0.2s;
+        }
+        .faq-chip:hover {
+          transform: translateY(-2px);
+          border-color: var(--primary-accent);
+        }
+
+        /* Input Bar Multi-line Textarea */
+        .chat-input-textarea {
+          width: 100%;
+          max-height: 120px;
+          resize: none;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: var(--text-primary);
+          font-size: 15px;
+        }
+
+        .recording {
+          color: #ef4444 !important;
+          animation: pulse 1s infinite;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 h-screen flex overflow-hidden antialiased">
+<body class="h-screen flex overflow-hidden antialiased">
 
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-950/80 z-30 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
@@ -28,7 +139,7 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-slate-950 flex flex-col justify-between border-r border-slate-800 shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
-            <!-- Header & Close Button -->
+            <!-- Header & Theme Switcher Button -->
             <div class="p-4 border-b border-slate-800 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -39,9 +150,14 @@
                         <span class="text-[9px] text-emerald-400 font-medium tracking-wider">AI AGRICULTURE</span>
                     </div>
                 </div>
-                <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-200 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <div class="flex items-center space-x-1">
+                    <button onclick="toggleTheme()" class="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg border border-slate-800 bg-slate-900 transition" title="Toggle Light/Dark Theme">
+                        <i class="fa-solid fa-circle-half-stroke text-sm"></i>
+                    </button>
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-200 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- New Chat Button -->
@@ -68,7 +184,7 @@
         <!-- User Profile & Auth Status -->
         <div class="p-3 bg-slate-950/90 border-t border-slate-800">
             <div id="userProfile" class="flex items-center justify-between">
-                <div class="flex items-center space-x-2.5 overflow-hidden">
+                <div class="flex items-center space-x-2.5 overflow-hidden cursor-pointer" onclick="openSettingsModal()">
                     <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl h-8 w-8 flex items-center justify-center font-semibold text-xs shrink-0">
                         <i class="fa-solid fa-user"></i>
                     </div>
@@ -86,12 +202,12 @@
     </aside>
 
     <!-- Main Content Workspace -->
-    <main class="flex-1 flex flex-col h-full bg-slate-900 min-w-0">
+    <main class="flex-1 flex flex-col h-full min-w-0">
         
         <!-- Top Header -->
-        <header class="h-14 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between bg-slate-900/80 backdrop-blur-md shrink-0">
+        <header class="h-14 border-b px-4 md:px-6 flex items-center justify-between backdrop-blur-md shrink-0" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
             <div class="flex items-center space-x-3">
-                <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-300 hover:text-white p-1.5 bg-slate-800/80 border border-slate-700 rounded-lg">
+                <button onclick="toggleMobileSidebar()" class="md:hidden p-1.5 rounded-lg border" style="background-color: var(--card-bg); border-color: var(--border-color);">
                     <i class="fa-solid fa-bars text-sm"></i>
                 </button>
                 <div class="flex items-center space-x-1.5">
@@ -120,33 +236,11 @@
                 <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 shadow-lg shadow-emerald-500/5">
                     <i class="fa-solid fa-leaf text-2xl"></i>
                 </div>
-                <h2 class="text-xl md:text-2xl font-bold text-slate-100 mb-1">Farman Kisan Hub AI</h2>
-                <p class="text-xs text-slate-400 max-w-md mb-8">Ask any agronomic questions regarding crops, soil health, or fertilizers.</p>
+                <h2 class="text-xl md:text-2xl font-bold mb-1">Farman Kisan Hub AI</h2>
+                <p class="text-xs max-w-md mb-6" style="color: var(--text-secondary);">Ask any agronomic questions regarding crops, soil health, or fertilizers.</p>
 
-                <!-- Options -->
-                <div class="w-full max-w-md space-y-2 text-left mb-6">
-                    <button onclick="triggerImageUpload()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
-                        <i class="fa-regular fa-image text-emerald-400 text-base"></i>
-                        <div class="truncate">
-                            <span class="font-medium text-slate-200 block">Analyze crop image</span>
-                            <span class="text-[10px] text-slate-500">Upload plant or soil photo for diagnosis</span>
-                        </div>
-                    </button>
-                    <button onclick="usePrompt('How to treat yellow rust in crops?')" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
-                        <i class="fa-solid fa-pen-to-square text-emerald-400 text-base"></i>
-                        <div class="truncate">
-                            <span class="font-medium text-slate-200 block">Disease & Pest Advisory</span>
-                            <span class="text-[10px] text-slate-500">Get instant fungicide and spray guidelines</span>
-                        </div>
-                    </button>
-                    <button onclick="usePrompt('What is the best fertilizer schedule for wheat?')" class="w-full p-3 bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800 rounded-2xl text-xs text-slate-300 transition flex items-center space-x-3">
-                        <i class="fa-solid fa-globe text-emerald-400 text-base"></i>
-                        <div class="truncate">
-                            <span class="font-medium text-slate-200 block">Soil & NPK Ratios</span>
-                            <span class="text-[10px] text-slate-500">Search latest agronomic standards</span>
-                        </div>
-                    </button>
-                </div>
+                <!-- FAQ Onboarding Chips Container -->
+                <div id="faqContainer" class="faq-container w-full max-w-md text-left mb-6"></div>
             </div>
 
             <!-- Messages Area -->
@@ -154,7 +248,7 @@
         </div>
 
         <!-- Floating Fixed Bottom Input Bar -->
-        <div class="fixed bottom-0 left-0 md:left-72 right-0 p-3 bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 z-20">
+        <div class="fixed bottom-0 left-0 md:left-72 right-0 p-3 backdrop-blur-md border-t z-20" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
             <div class="max-w-4xl mx-auto">
                 
                 <!-- Voice Listening Status Bar -->
@@ -167,10 +261,10 @@
                 </div>
 
                 <!-- Image Preview Box -->
-                <div id="imagePreviewBox" class="hidden mb-2 p-2 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between w-fit max-w-xs">
+                <div id="imagePreviewBox" class="hidden mb-2 p-2 rounded-xl flex items-center justify-between w-fit max-w-xs border" style="background-color: var(--card-bg); border-color: var(--border-color);">
                     <div class="flex items-center space-x-2 truncate">
                         <i class="fa-solid fa-file-image text-emerald-400 text-sm"></i>
-                        <span id="imagePreviewName" class="text-xs text-slate-300 truncate">crop_photo.jpg</span>
+                        <span id="imagePreviewName" class="text-xs truncate">crop_photo.jpg</span>
                     </div>
                     <button onclick="removeSelectedImage()" class="text-slate-500 hover:text-rose-400 ml-2 p-1">
                         <i class="fa-solid fa-xmark text-xs"></i>
@@ -180,17 +274,16 @@
                 <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
 
                 <!-- Input Capsule -->
-                <form id="chatForm" onsubmit="event.preventDefault(); sendMessage();" class="relative flex items-center bg-slate-950 border border-slate-800 rounded-3xl px-3 py-1.5 focus-within:border-emerald-500/50 shadow-xl">
+                <form id="chatForm" onsubmit="event.preventDefault(); sendMessage();" class="relative flex items-center rounded-3xl px-3 py-1.5 border shadow-xl" style="background-color: var(--card-bg); border-color: var(--border-color);">
                     
-                    <button type="button" onclick="triggerImageUpload()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition shrink-0 mr-1.5" title="Upload Image/File">
+                    <button type="button" onclick="triggerImageUpload()" class="w-8 h-8 rounded-full flex items-center justify-center transition shrink-0 mr-1.5" style="background-color: var(--border-color);" title="Upload Image/File">
                         <i class="fa-solid fa-plus text-sm"></i>
                     </button>
 
-                    <input type="text" id="chatInput" placeholder="Ask Farman Kisan AI..." required
-                        class="w-full bg-transparent border-none focus:outline-none text-xs md:text-sm text-slate-200 placeholder-slate-500 py-2 px-1">
+                    <textarea id="chatInput" placeholder="Ask Farman Kisan AI..." rows="1" required class="chat-input-textarea py-2 px-1"></textarea>
 
                     <div class="flex items-center space-x-1.5 ml-1 shrink-0">
-                        <button type="button" id="voiceBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Recording">
+                        <button type="button" id="micBtn" onclick="toggleVoiceInput()" class="w-8 h-8 rounded-full hover:bg-slate-800/10 text-slate-400 hover:text-emerald-400 flex items-center justify-center transition" title="Voice Recording">
                             <i id="micIcon" class="fa-solid fa-microphone text-sm"></i>
                         </button>
 
@@ -204,8 +297,8 @@
     </main>
 
     <!-- Auth Modal (Sign In / Sign Up) -->
-    <div id="authModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
+    <div id="authModal" class="custom-modal">
+        <div class="modal-content relative shadow-2xl">
             <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
@@ -214,24 +307,27 @@
                 <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                     <i class="fa-solid fa-leaf text-xs"></i>
                 </div>
-                <h3 id="authModalTitle" class="text-sm font-bold text-slate-100">Sign In to Farman Kisan</h3>
+                <h3 id="authModalTitle" class="text-sm font-bold">Sign In to Farman Kisan</h3>
             </div>
 
-            <p class="text-[11px] text-slate-400 mb-3">Sign in or sign up to sync your chat history securely across devices.</p>
+            <p class="text-[11px] mb-3" style="color: var(--text-secondary);">Sign in or sign up to sync your chat history securely across devices.</p>
             
             <!-- AUTH FORM -->
             <form onsubmit="handleAuthSubmitForm(event)" class="space-y-3">
                 <div id="nameFieldContainer" class="hidden">
-                    <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
-                    <input type="text" id="authNameInput" placeholder="Farman Ali" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <label class="block text-[9px] font-semibold uppercase tracking-wider mb-1" style="color: var(--text-secondary);">Full Name</label>
+                    <input type="text" id="authNameInput" placeholder="Farman Ali" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
                 </div>
                 <div>
-                    <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Username / Email</label>
-                    <input type="text" id="authUsernameInput" required placeholder="kisan_user" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <label class="block text-[9px] font-semibold uppercase tracking-wider mb-1" style="color: var(--text-secondary);">Username / Email</label>
+                    <input type="text" id="authUsernameInput" required placeholder="kisan_user" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
                 </div>
                 <div>
-                    <label class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
-                    <input type="password" id="authPasswordInput" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:border-emerald-500 outline-none">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-[9px] font-semibold uppercase tracking-wider" style="color: var(--text-secondary);">Password</label>
+                        <button type="button" onclick="openForgotPassModal()" class="text-[10px] text-emerald-500 hover:underline">Forgot?</button>
+                    </div>
+                    <input type="password" id="authPasswordInput" required placeholder="••••••••" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
                 </div>
 
                 <!-- SUBMIT BUTTON -->
@@ -248,22 +344,270 @@
         </div>
     </div>
 
+    <!-- Confirm Delete Modal -->
+    <div id="deleteModal" class="custom-modal">
+        <div class="modal-content relative text-center">
+            <h3 class="text-sm font-bold mb-2">Delete Chat?</h3>
+            <p class="text-xs mb-4" style="color: var(--text-secondary);">Are you sure you want to permanently delete this chat history?</p>
+            <div class="flex space-x-2">
+                <button onclick="closeDeleteModal()" class="flex-1 py-1.5 rounded-lg text-xs font-semibold border" style="border-color: var(--border-color);">Cancel</button>
+                <button onclick="confirmDeleteChat()" class="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold transition">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPassModal" class="custom-modal">
+        <div class="modal-content relative">
+            <button onclick="document.getElementById('forgotPassModal').classList.remove('active')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-sm font-bold mb-3">Reset Password</h3>
+            <div class="space-y-3">
+                <input type="email" id="forgotEmailInput" placeholder="Enter registered email" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+                <input type="password" id="forgotPassInput" placeholder="Enter new password" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+                <button onclick="resetForgotPassword()" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold">Submit Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <div id="settingsModal" class="custom-modal">
+        <div class="modal-content relative">
+            <button onclick="document.getElementById('settingsModal').classList.remove('active')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-sm font-bold mb-3">Account Settings</h3>
+            <div class="space-y-3">
+                <input type="text" id="settingNameInput" placeholder="Update Name" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+                <input type="text" id="settingAvatarInput" placeholder="Avatar URL" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+                <input type="password" id="settingPassInput" placeholder="New Password (optional)" class="w-full px-3 py-1.5 rounded-lg text-xs border outline-none" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+                <button onclick="updateUserProfile()" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Script Logic -->
     <script>
-        const AUTH_TOKEN_KEY = "kisan_auth_token";
-        let userChatsList = []; // Memory array for logged-in user chats
+        // ==========================================
+        // 1. DYNAMIC THEME SWITCHER
+        // ==========================================
+        function toggleTheme() {
+          const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+          const newTheme = currentTheme === "light" ? "dark" : "light";
+          document.documentElement.setAttribute("data-theme", newTheme);
+          localStorage.setItem("kisan_theme", newTheme);
+        }
 
-        // 1. Check if user is logged in
+        // ==========================================
+        // 2. READABLE RESPONSE MARKDOWN FORMATTER
+        // ==========================================
+        function formatResponseToHTML(text) {
+          if (!text) return "";
+          let html = text
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^\- (.*$)/gim, '<li>$1</li>')
+            .replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>')
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>');
+          return html;
+        }
+
+        // ==========================================
+        // 3. MULTI-LINGUAL VOICE RECOGNITION
+        // ==========================================
+        let isListening = false;
+        let recognition = null;
+
+        function toggleVoiceInput() {
+          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Voice recognition is not supported in this browser.");
+            return;
+          }
+
+          if (isListening) {
+            stopVoiceRecording();
+            return;
+          }
+
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          recognition = new SpeechRecognition();
+          
+          recognition.lang = 'ur-PK';
+          recognition.continuous = false;
+          recognition.interimResults = false;
+
+          recognition.onstart = function() {
+            isListening = true;
+            document.getElementById("micBtn")?.classList.add("recording");
+            document.getElementById('voiceStatusBox')?.classList.remove('hidden');
+          };
+
+          recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            if (chatInput) chatInput.value += (chatInput.value ? " " : "") + transcript;
+          };
+
+          recognition.onend = function() {
+            stopVoiceRecording();
+          };
+
+          recognition.start();
+        }
+
+        function stopVoiceRecording() {
+            isListening = false;
+            if (recognition) recognition.stop();
+            document.getElementById("micBtn")?.classList.remove("recording");
+            document.getElementById('voiceStatusBox')?.classList.add('hidden');
+        }
+
+        // ==========================================
+        // 4. PIN CHAT & CONFIRM DELETE SYNC
+        // ==========================================
+        let chatToDeleteId = null;
+
+        function showDeleteConfirmModal(chatId) {
+          chatToDeleteId = chatId;
+          document.getElementById("deleteModal")?.classList.add("active");
+        }
+
+        function closeDeleteModal() {
+          chatToDeleteId = null;
+          document.getElementById("deleteModal")?.classList.remove("active");
+        }
+
+        async function confirmDeleteChat() {
+          if (!chatToDeleteId) return;
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          
+          try {
+            await fetch("/api/history", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+              body: JSON.stringify({ action: "delete", id: chatToDeleteId })
+            });
+            
+            closeDeleteModal();
+            fetchUserCloudHistory();
+          } catch (err) {
+            alert("Failed to delete chat.");
+          }
+        }
+
+        async function togglePinChat(chatId) {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          try {
+            await fetch("/api/history", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+              body: JSON.stringify({ action: "toggle-pin", id: chatId })
+            });
+            fetchUserCloudHistory();
+          } catch (err) {}
+        }
+
+        // ==========================================
+        // 5. PRE-CONFIGURED ONBOARDING FAQS
+        // ==========================================
+        const FAQ_PROMPTS = [
+          "🌾 Gandum ki fasal mein pehli khad kab aur kitni deni chahiye?",
+          "🐛 Kapas ki Gulabi Sundi ka sasta aur muasir ilaj kya hai?",
+          "🧪 Zameen ke kalar (Salinity) ke khatme ke liye Gypsum ka istemal kaise karein?",
+          "💧 Dhan (Chawal) mein pani ki bachat aur behtar paidawar ka tareeqah?"
+        ];
+
+        function renderOnboardingFAQs() {
+          const container = document.getElementById("faqContainer");
+          if (!container) return;
+          
+          container.innerHTML = FAQ_PROMPTS.map(faq => `
+            <div class="faq-chip" onclick="sendFAQPrompt('${faq}')">
+              ${faq}
+            </div>
+          `).join("");
+        }
+
+        function sendFAQPrompt(promptText) {
+          if (chatInput) {
+            chatInput.value = promptText;
+            sendMessage();
+          }
+        }
+
+        // ==========================================
+        // 6. USER PROFILE & FORGOT PASSWORD MODALS
+        // ==========================================
+        function openSettingsModal() {
+            if (!isUserLoggedIn()) {
+                toggleAuthModal();
+                return;
+            }
+            document.getElementById("settingsModal")?.classList.add("active");
+        }
+
+        function openForgotPassModal() {
+            toggleAuthModal();
+            document.getElementById("forgotPassModal")?.classList.add("active");
+        }
+
+        async function updateUserProfile() {
+          const name = document.getElementById("settingNameInput")?.value;
+          const avatar = document.getElementById("settingAvatarInput")?.value;
+          const newPassword = document.getElementById("settingPassInput")?.value;
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+          const res = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+            body: JSON.stringify({ action: "update-profile", name, avatar, newPassword })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            alert("Profile updated successfully!");
+            document.getElementById("settingsModal")?.classList.remove("active");
+            checkCurrentSession();
+          } else {
+            alert("Error: " + data.error);
+          }
+        }
+
+        async function resetForgotPassword() {
+          const email = document.getElementById("forgotEmailInput")?.value;
+          const newPassword = document.getElementById("forgotPassInput")?.value;
+
+          const res = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "forgot-password", email, newPassword })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            alert(data.message || "Password reset successfully!");
+            document.getElementById("forgotPassModal")?.classList.remove("active");
+          } else {
+            alert("Error: " + data.error);
+          }
+        }
+
+        // ==========================================
+        // 7. CORE SYSTEM APP LOGIC
+        // ==========================================
+        const AUTH_TOKEN_KEY = "kisan_auth_token";
+        let userChatsList = [];
+
         function isUserLoggedIn() {
             return !!localStorage.getItem(AUTH_TOKEN_KEY);
         }
 
-        // 2. Fetch full account history from Database on Login / Page Load
         async function fetchUserCloudHistory() {
             if (!isUserLoggedIn()) {
                 userChatsList = [];
                 localStorage.removeItem("kisan_chat_history");
-                if (typeof renderSidebarChats === "function") renderSidebarChats([]);
+                renderSidebarChats([]);
                 return;
             }
 
@@ -280,23 +624,15 @@
                 const data = await res.json();
                 if (data.ok && Array.isArray(data.chats)) {
                     userChatsList = data.chats;
-                    if (typeof renderSidebarChats === "function") {
-                        renderSidebarChats(userChatsList);
-                    } else {
-                        renderHistoryList();
-                    }
+                    renderSidebarChats(userChatsList);
                 }
             } catch (err) {
                 console.error("Failed to load user history:", err);
             }
         }
 
-        // 3. Save chat ONLY IF Logged In
         async function saveChatIfLoggedIn(chatObj) {
-            if (!isUserLoggedIn()) {
-                return; // Bina login ke history save NAHI hogi
-            }
-
+            if (!isUserLoggedIn()) return;
             const token = localStorage.getItem(AUTH_TOKEN_KEY);
             try {
                 await fetch("/api/history", {
@@ -313,14 +649,12 @@
             }
         }
 
-        // 4. On Sign In Success
         async function onLoginSuccess(token) {
             localStorage.setItem(AUTH_TOKEN_KEY, token);
             await fetchUserCloudHistory();
             await checkCurrentSession();
         }
 
-        // 5. On Sign Out Success
         function onSignOut() {
             localStorage.removeItem(AUTH_TOKEN_KEY);
             localStorage.removeItem("kisan_chat_history");
@@ -338,18 +672,20 @@
             document.getElementById('welcomeScreen').classList.remove('hidden');
         }
 
-        // Check session on page load
         document.addEventListener("DOMContentLoaded", function() {
+            const savedTheme = localStorage.getItem("kisan_theme") || "dark";
+            document.documentElement.setAttribute("data-theme", savedTheme);
+
+            renderOnboardingFAQs();
+
             if (isUserLoggedIn()) {
                 fetchUserCloudHistory();
                 checkCurrentSession();
             } else {
                 onSignOut();
             }
-            initSpeechRecognition();
         });
 
-        // API Auth Helper
         async function apiAuth(action, data = {}) {
             const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
             try {
@@ -367,7 +703,6 @@
             }
         }
 
-        // Sign Up & Sign In Functions
         async function userSignUp(emailOrUsername, password, name = "") {
             if (!emailOrUsername || !password) {
                 alert("Please enter username/email and password.");
@@ -420,24 +755,28 @@
             }
         }
 
-        // ==========================================
-        // 2. CHAT & UI LOGIC
-        // ==========================================
         let currentChatId = null;
         let messages = [];
         let currentUser = null;
         let guestMessageCount = parseInt(localStorage.getItem('fkh_guest_count') || '0');
         const MAX_GUEST_LIMIT = 5;
         let isSignupView = false;
-        let isVoiceActive = false;
         let isSending = false;
         let selectedImageData = null;
-        let recognition = null;
 
         const chatContainer = document.getElementById('chatContainer');
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
+
+        if (chatInput) {
+          chatInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          });
+        }
 
         function generateId() {
             return 'session_' + Date.now();
@@ -447,7 +786,7 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        const MAX_INPUT_CHARS = 10000;
+        const MAX_INPUT_CHARS = 1000;
         const TOKEN_DELAY_MS = 20;
 
         let lastWarningRow = null;
@@ -467,11 +806,15 @@
         }
 
         async function typeTokensEffect(bubble, text) {
-            bubble.textContent = '';
-            if (!TOKEN_DELAY_MS) { bubble.textContent = text; scrollBottom(); return; }
+            bubble.innerHTML = '';
+            const htmlText = formatResponseToHTML(text);
+            if (!TOKEN_DELAY_MS) { bubble.innerHTML = htmlText; scrollBottom(); return; }
+            
             const tokens = text.split(/(\s+)/);
+            let currentAccumulated = "";
             for (const t of tokens) {
-                bubble.textContent += t;
+                currentAccumulated += t;
+                bubble.innerHTML = formatResponseToHTML(currentAccumulated);
                 if (t.trim()) {
                     scrollBottom();
                     await new Promise(r => setTimeout(r, TOKEN_DELAY_MS));
@@ -493,9 +836,9 @@
                 <div class="${isUser ? 'bg-emerald-600' : 'bg-slate-800 border border-slate-700'} text-slate-100 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs font-semibold">
                     <i class="fa-solid ${isUser ? 'fa-user' : 'fa-leaf text-emerald-400'} text-[11px]"></i>
                 </div>
-                <div class="${isUser ? 'bg-emerald-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-200'} p-3.5 rounded-2xl shadow-sm w-full text-xs leading-relaxed overflow-x-auto msg-bubble">
+                <div class="${isUser ? 'bg-emerald-600 text-white' : 'border shadow-sm w-full text-xs leading-relaxed overflow-x-auto msg-bubble'} p-3.5 rounded-2xl" style="${isUser ? '' : 'background-color: var(--card-bg); border-color: var(--border-color); color: var(--text-primary);'}">
                     ${imgHTML}
-                    <div class="whitespace-pre-wrap font-normal">${text}</div>
+                    <div class="whitespace-pre-wrap font-normal">${isUser ? text : formatResponseToHTML(text)}</div>
                 </div>
             `;
             
@@ -545,12 +888,13 @@
             if (!currentChatId) currentChatId = generateId();
             saveCurrentChat();
             chatInput.value = '';
+            chatInput.style.height = 'auto';
 
             removeSelectedImage();
 
             const row = document.createElement('div');
             row.className = 'flex items-start space-x-2.5 my-3';
-            row.innerHTML = '<div class="bg-slate-800 border border-slate-700 text-emerald-400 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs"><i class="fa-solid fa-leaf text-[11px]"></i></div><div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl shadow-sm w-full text-xs text-slate-200 msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+            row.innerHTML = `<div class="bg-slate-800 border border-slate-700 text-emerald-400 rounded-xl h-7 w-7 flex items-center justify-center shrink-0 text-xs"><i class="fa-solid fa-leaf text-[11px]"></i></div><div class="border p-3.5 rounded-2xl shadow-sm w-full text-xs msg-bubble" style="background-color: var(--card-bg); border-color: var(--border-color);"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
             chatMessages.appendChild(row);
             const bubble = row.querySelector('.msg-bubble');
             scrollBottom();
@@ -598,52 +942,6 @@
             
             saveChatIfLoggedIn(chatObj);
             renderHistoryList();
-        }
-
-        function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = true;
-                recognition.lang = 'ur-PK';
-
-                recognition.onstart = function() {
-                    isVoiceActive = true;
-                    document.getElementById('voiceStatusBox').classList.remove('hidden');
-                    document.getElementById('micIcon').classList.add('text-rose-500', 'animate-pulse');
-                };
-
-                recognition.onresult = function(event) {
-                    let transcript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        transcript += event.results[i][0].transcript;
-                    }
-                    chatInput.value = transcript;
-                };
-
-                recognition.onerror = function() { stopVoiceRecording(); };
-                recognition.onend = function() { stopVoiceRecording(); };
-            }
-        }
-
-        function toggleVoiceInput() {
-            if (!recognition) {
-                alert("Speech recognition is not supported in this browser.");
-                return;
-            }
-            if (isVoiceActive) {
-                recognition.stop();
-            } else {
-                try { recognition.start(); } catch (err) { recognition.stop(); }
-            }
-        }
-
-        function stopVoiceRecording() {
-            isVoiceActive = false;
-            if (recognition) recognition.stop();
-            document.getElementById('voiceStatusBox').classList.add('hidden');
-            document.getElementById('micIcon').classList.remove('text-rose-500', 'animate-pulse');
         }
 
         function toggleMobileSidebar() {
@@ -721,7 +1019,8 @@
         }
 
         function toggleAuthModal() {
-            document.getElementById('authModal').classList.toggle('hidden');
+            const modal = document.getElementById('authModal');
+            modal.classList.toggle('active');
         }
 
         function toggleAuthModeType() {
@@ -757,11 +1056,6 @@
             }
         }
 
-        function usePrompt(text) {
-            chatInput.value = text;
-            sendMessage();
-        }
-
         function renderHistoryList(customList = null) {
             const listToRender = customList || userChatsList;
             const container = document.getElementById('chatHistoryList');
@@ -770,18 +1064,26 @@
 
             listToRender.forEach(session => {
                 const isActive = session.id === currentChatId;
+                const isPinned = session.pinned || false;
                 const div = document.createElement('div');
-                div.className = `p-2 rounded-xl text-xs cursor-pointer transition flex items-center justify-between group ${isActive ? 'bg-slate-800/90 text-slate-100 border border-slate-700' : 'text-slate-400 hover:bg-slate-900/80 hover:text-slate-200 border border-transparent'}`;
+                div.className = `p-2 rounded-xl text-xs cursor-pointer transition flex items-center justify-between group`;
+                div.style.backgroundColor = isActive ? 'var(--card-bg)' : 'transparent';
+                div.style.color = isActive ? 'var(--text-primary)' : 'var(--text-secondary)';
                 
                 div.onclick = () => { loadSession(session.id); closeSidebarOnMobile(); };
                 div.innerHTML = `
                     <div class="flex items-center space-x-2 truncate">
-                        <i class="fa-regular fa-message text-slate-500 text-[11px]"></i>
-                        <span class="truncate">${session.title}</span>
+                        <i class="fa-regular fa-message text-[11px]"></i>
+                        <span class="truncate">${isPinned ? '📌 ' : ''}${session.title}</span>
                     </div>
-                    <button onclick="deleteSession(event, '${session.id}')" class="opacity-100 md:opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 p-1 transition">
-                        <i class="fa-solid fa-trash-can text-[10px]"></i>
-                    </button>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="event.stopPropagation(); togglePinChat('${session.id}')" class="opacity-100 md:opacity-0 group-hover:opacity-100 hover:text-emerald-400 p-1 transition" title="Pin Chat">
+                            <i class="fa-solid fa-thumbtack text-[10px]"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); showDeleteConfirmModal('${session.id}')" class="opacity-100 md:opacity-0 group-hover:opacity-100 hover:text-rose-400 p-1 transition" title="Delete Chat">
+                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                        </button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -808,15 +1110,6 @@
             renderHistoryList();
         }
 
-        function deleteSession(e, id) {
-            e.stopPropagation();
-            userChatsList = userChatsList.filter(s => s.id !== id);
-            renderHistoryList();
-            if (currentChatId === id) {
-                startNewChat();
-            }
-        }
-
         function startNewChat() {
             currentChatId = null;
             messages = [];
@@ -825,6 +1118,11 @@
             document.getElementById('welcomeScreen').classList.remove('hidden');
             renderHistoryList();
         }
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
     </script>
 </body>
 </html>
