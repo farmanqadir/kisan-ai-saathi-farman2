@@ -1,4 +1,4 @@
-const VERSION = "history-v4-search-delete";
+const VERSION = "history-v5-production";
 const MAX_CHATS = 300;
 const MAX_CONTENT_CHARS = 10000;
 
@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
     const user = await getUserId(req, body);
     if (!user) return send(res, { ok: false, authError: true, error: "Not signed in." });
 
-    // LIST & SEARCH
+    // LIST CHATS WITH SEARCH FILTER
     if (action === "list") {
       const ids = await redis("ZREVRANGE", zkey(user), 0, MAX_CHATS - 1);
       if (!ids || !ids.length) return send(res, { ok: true, chats: [] });
@@ -65,12 +65,12 @@ module.exports = async function handler(req, res) {
       let chats = [];
       (values || []).forEach((v) => { if (v) try { chats.push(JSON.parse(v)); } catch (e) {} });
 
-      // Search Filter
       const search = String(body.search || "").toLowerCase().trim();
       if (search) {
-        chats = chats.filter(c => c.title.toLowerCase().includes(search) || JSON.stringify(c.messages).toLowerCase().includes(search));
+        chats = chats.filter(c => (c.title || "").toLowerCase().includes(search) || JSON.stringify(c.messages || "").toLowerCase().includes(search));
       }
 
+      chats.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.updatedAt - a.updatedAt);
       return send(res, { ok: true, chats: chats });
     }
 
@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
       return send(res, { ok: true });
     }
 
-    // PERMANENT INDIVIDUAL DELETE
+    // PERMANENT DELETE (DEFECT 15 FIX)
     if (action === "delete") {
       const id = String(body.id || "").trim();
       await redis("DEL", ckey(user, id));
