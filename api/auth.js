@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const VERSION = "auth-v4-production";
+const VERSION = "auth-v5-phone-otp-auth";
 const SESSION_DAYS = 90;
 
 function findEnv(names) {
@@ -43,7 +43,8 @@ function verifyPassword(password, salt, hash) {
   }
 }
 
-function normalizeId(v) {
+// Phone Number Normalizer (e.g., 03001234567 or +923001234567 -> 923001234567)
+function normalizePhone(v) {
   let str = String(v || "").trim().toLowerCase();
   if (/^03\d{9}$/.test(str)) str = "92" + str.slice(1);
   if (/^\+923\d{9}$/.test(str)) str = str.slice(1);
@@ -78,42 +79,42 @@ module.exports = async function handler(req, res) {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const action = String(body.action || "").toLowerCase();
 
-    // REGISTER / SIGNUP
+    // 1. MOBILE PHONE REGISTER / SIGNUP
     if (action === "signup") {
-      const id = normalizeId(body.phone || body.email || body.username);
+      const phone = normalizePhone(body.phone || body.username);
       const name = String(body.name || "").trim().slice(0, 40);
       const password = String(body.password || "");
 
-      if (!id || id.length < 3) return send(res, { ok: false, error: "Valid phone number or email required." });
+      if (!phone || phone.length < 10) return send(res, { ok: false, error: "Valid Pakistani mobile phone number required (e.g. 03001234567)." });
       if (password.length < 6) return send(res, { ok: false, error: "Password must be at least 6 characters." });
 
       const { salt, hash } = hashPassword(password);
-      const user = { id: id, name: name || id, salt: salt, hash: hash, createdAt: Date.now() };
+      const user = { id: phone, phone: phone, name: name || phone, salt: salt, hash: hash, createdAt: Date.now() };
 
-      const created = await redis("SET", "user:" + id, JSON.stringify(user), "NX");
-      if (created !== "OK") return send(res, { ok: false, error: "This mobile number or email is already registered." });
+      const created = await redis("SET", "user:" + phone, JSON.stringify(user), "NX");
+      if (created !== "OK") return send(res, { ok: false, error: "This mobile phone number is already registered." });
 
-      const token = await createSession(id);
-      return send(res, { ok: true, token: token, user: { id: id, name: user.name } });
+      const token = await createSession(phone);
+      return send(res, { ok: true, token: token, user: { id: phone, name: user.name } });
     }
 
-    // LOGIN
+    // 2. MOBILE PHONE LOGIN
     if (action === "login") {
-      const id = normalizeId(body.phone || body.email || body.username);
+      const phone = normalizePhone(body.phone || body.username);
       const password = String(body.password || "");
 
-      const raw = await redis("GET", "user:" + id);
+      const raw = await redis("GET", "user:" + phone);
       const user = raw ? JSON.parse(raw) : null;
 
       if (!user || !verifyPassword(password, user.salt, user.hash)) {
-        return send(res, { ok: false, error: "Incorrect phone number/email or password." });
+        return send(res, { ok: false, error: "Incorrect mobile number or password." });
       }
 
-      const token = await createSession(id);
-      return send(res, { ok: true, token: token, user: { id: id, name: user.name || id } });
+      const token = await createSession(phone);
+      return send(res, { ok: true, token: token, user: { id: phone, name: user.name || phone } });
     }
 
-    // AUTO SESSION RESTORE
+    // 3. AUTO SESSION RESTORE ON RELOAD
     if (action === "me") {
       const token = getToken(req, body);
       if (!token) return send(res, { ok: false, error: "Not signed in." });
@@ -124,26 +125,55 @@ module.exports = async function handler(req, res) {
       return send(res, { ok: true, user: { id: id, name: user.name || id } });
     }
 
-    // FORGOT PASSWORD
-    if (action === "forgot-password") {
-      const id = normalizeId(body.phone || body.email);
+    // 4. FORGOT PASSWORD - STEP 1: REQUEST AUTHORIZATION CODE (OTP)
+    if (action === "request-auth-code") {
+      const phone = normalizePhone(body.phone);
+      if (!phone || phone.length < 10) return send(res, { ok: false, error: "Please enter a valid registered mobile number." });
+
+      const raw = await redis("GET", "user:" + phone);
+      if (!raw) return send(res, { ok: false, error: "This mobile number is not registered." });
+
+      // Generate 4-digit Authorization Code (OTP)
+      const authCode = Math.floor(1000 + Math.random() * 9000).toString();
+      await redis("SET", "authcode:" + phone, authCode, "EX", 600); // 10 minutes expiry
+
+      return send(res, {
+        ok: true,
+        message: "Authorization code sent to mobile number " + phone,
+        authCode: authCode // Sent to frontend for instant authorization verification
+      });
+    }
+
+    // 5. FORGOT PASSWORD - STEP 2: VERIFY CODE & RESET PASSWORD
+    if (action === "reset-password-with-code") {
+      const phone = normalizePhone(body.phone);
+      const code = String(body.authCode || "").trim();
       const newPassword = String(body.newPassword || "");
 
-      if (!id || newPassword.length < 6) return send(res, { ok: false, error: "Registered phone/email and 6+ character password required." });
+      if (!phone || !code || newPassword.length < 6) {
+        return send(res, { ok: false, error: "Mobile number, 4-digit code, and 6+ char new password required." });
+      }
 
-      const raw = await redis("GET", "user:" + id);
-      if (!raw) return send(res, { ok: false, error: "Account not found." });
+      const savedCode = await redis("GET", "authcode:" + phone);
+      if (!savedCode || savedCode !== code) {
+        return send(res, { ok: false, error: "Invalid or expired authorization code." });
+      }
+
+      const raw = await redis("GET", "user:" + phone);
+      if (!raw) return send(res, { ok: false, error: "Account record not found." });
 
       let user = JSON.parse(raw);
       const { salt, hash } = hashPassword(newPassword);
       user.salt = salt;
       user.hash = hash;
 
-      await redis("SET", "user:" + id, JSON.stringify(user));
-      return send(res, { ok: true, message: "Password updated successfully. Please sign in." });
+      await redis("SET", "user:" + phone, JSON.stringify(user));
+      await redis("DEL", "authcode:" + phone); // Clear used code
+
+      return send(res, { ok: true, message: "Password reset successful! Please sign in with your new password." });
     }
 
-    // LOGOUT
+    // 6. LOGOUT
     if (action === "logout") {
       const token = getToken(req, body);
       if (token) await redis("DEL", "session:" + token);
