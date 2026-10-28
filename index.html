@@ -116,7 +116,7 @@
     <div class="input-bar">
       <div class="input-controls">
         <!-- Hidden File Input -->
-        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/jpg" style="display: none;" onchange="handleFileSelect(event)">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/jpg" style="display: none;" onchange="handleCropImageSelect(event)">
         
         <button class="icon-btn" title="Attach Crop Photo" onclick="document.getElementById('fileInput').click()"><i class="bi bi-paperclip"></i></button>
         <button class="icon-btn" id="micBtn" title="Voice Input" onclick="toggleVoiceInput()"><i class="bi bi-mic"></i></button>
@@ -135,17 +135,18 @@
     let currentImageMime = null;
     let messages = [];
     let isListening = false;
-    let recognition = null;
+    let recognitionInstance = null;
 
-    // Toast Notification
-    function showToast(text) {
+    // 1. Toast Notification
+    function showToast(text, type = "info") {
       const box = document.getElementById("toastBox");
+      if (!box) return;
       box.textContent = text;
       box.classList.add("active");
       setTimeout(() => box.classList.remove("active"), 3500);
     }
 
-    // Theme Toggle
+    // 2. Theme Toggle
     function toggleTheme() {
       const current = document.documentElement.getAttribute("data-theme");
       const next = current === "dark" ? "light" : "dark";
@@ -156,13 +157,13 @@
       document.getElementById("sidebar").classList.toggle("collapsed");
     }
 
-    // Handle Image Selection & Base64 Converter
-    function handleFileSelect(event) {
+    // 3. Image Selection & Base64 Converter
+    function handleCropImageSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       if (file.size > 10 * 1024 * 1024) {
-        showToast("Error: Image size exceeds 10MB limit.");
+        showToast("Error: Image size 10MB se zyada nahi honi chahiye.");
         return;
       }
 
@@ -172,7 +173,7 @@
         currentImageMime = file.type;
 
         document.getElementById("imgPreviewThumb").src = e.target.result;
-        document.getElementById("imageStatusBadge").textContent = "Uploaded (" + (file.size/1024).toFixed(1) + " KB)";
+        document.getElementById("imageStatusBadge").textContent = "Photo Attached ✅ (" + (file.size/1024).toFixed(1) + " KB)";
         document.getElementById("imagePreviewBar").classList.add("active");
       };
       reader.readAsDataURL(file);
@@ -185,77 +186,98 @@
       document.getElementById("imagePreviewBar").classList.remove("active");
     }
 
-    // Voice-to-Text Input
+    // 4. Voice-to-Text Input
     function toggleVoiceInput() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         showToast("Voice input is not supported in this browser.");
         return;
       }
 
-      if (isListening) {
-        recognition.stop();
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (isListening && recognitionInstance) {
+        recognitionInstance.stop();
         return;
       }
 
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'en-US'; 
-      
-      recognition.onstart = function() {
+      recognitionInstance = new SpeechRecognition();
+      recognitionInstance.lang = 'ur-PK';
+      recognitionInstance.interimResults = false;
+
+      recognitionInstance.onstart = function() {
         isListening = true;
         document.getElementById("micBtn").classList.add("recording");
       };
 
-      recognition.onresult = function(e) {
-        document.getElementById("chatInput").value += " " + e.results[0][0].transcript;
+      recognitionInstance.onresult = function(e) {
+        const transcript = e.results[0][0].transcript;
+        const inputEl = document.getElementById("chatInput");
+        if (inputEl) {
+          inputEl.value += (inputEl.value ? " " : "") + transcript;
+        }
       };
 
-      recognition.onend = function() {
-        isListening = false;
-        document.getElementById("micBtn").classList.remove("recording");
+      recognitionInstance.onerror = function() {
+        stopVoiceRecordingState();
       };
 
-      recognition.start();
+      recognitionInstance.onend = function() {
+        stopVoiceRecordingState();
+      };
+
+      recognitionInstance.start();
     }
 
-    // Text-To-Speech (TTS Reader for farmers)
+    function stopVoiceRecordingState() {
+      isListening = false;
+      const micBtn = document.getElementById("micBtn");
+      if (micBtn) micBtn.classList.remove("recording");
+    }
+
+    // 5. Text-To-Speech Reader for Farmers
     function speakText(text) {
       if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text.replace(/[*#]/g, ''));
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_]/g, ''));
+        utterance.lang = 'ur-PK';
         window.speechSynthesis.speak(utterance);
       }
     }
 
-    // Format AI Response to Readable HTML Cards
-    function formatMarkdown(text) {
+    // 6. Response Formatter (Readable Cards / Headings)
+    function formatMarkdownResponse(text) {
+      if (!text) return "";
       return text
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gim, '<h3 style="color:var(--primary-accent); margin:10px 0 4px 0; font-size:16px; font-weight:700;">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 style="color:var(--primary-accent); margin:12px 0 6px 0; font-size:18px; font-weight:700;">$1</h2>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/^\- (.*$)/gim, '<li>$1</li>')
+        .replace(/^\- (.*$)/gim, '<li style="margin-left:15px; margin-bottom:4px;">$1</li>')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
     }
 
-    // Append Message to UI
+    // 7. Append Message to UI
     function appendMessage(role, text, imageSrc = null) {
       const container = document.getElementById("chatContainer");
       const row = document.createElement("div");
       row.className = `msg-row ${role === 'user' ? 'user' : 'ai'}`;
 
       let imgHTML = imageSrc ? `<img src="${imageSrc}" style="max-width:200px; border-radius:8px; margin-bottom:8px; display:block;">` : '';
-      let ttsBtn = role === 'assistant' ? `<button onclick="speakText(\`${text.replace(/[`"]/g, '')}\`)" style="border:none; background:none; cursor:pointer; opacity:0.6; margin-top:6px; color:var(--text-primary);" title="Listen"><i class="bi bi-volume-up"></i> Listen</button>` : '';
+      let ttsBtn = role === 'assistant' ? `<br><button onclick="speakText(\`${text.replace(/[`"]/g, '')}\`)" style="border:none; background:none; cursor:pointer; opacity:0.7; margin-top:8px; font-size:12px; color:inherit;" title="Listen"><i class="bi bi-volume-up"></i> Suniye</button>` : '';
 
-      row.innerHTML = `<div class="msg-bubble">${imgHTML}${formatMarkdown(text)}${ttsBtn}</div>`;
+      row.innerHTML = `<div class="msg-bubble">${imgHTML}${formatMarkdownResponse(text)}${ttsBtn}</div>`;
       container.appendChild(row);
       container.scrollTop = container.scrollHeight;
     }
 
-    // Send Message Handler
+    // 8. Main Send Message Function
     async function sendMessage() {
-      const input = document.getElementById("chatInput");
-      const text = input.value.trim();
+      const inputEl = document.getElementById("chatInput");
+      const container = document.getElementById("chatContainer");
+      if (!inputEl || !container) return;
+
+      const text = inputEl.value.trim();
       if (!text && !currentImageBase64) return;
 
       const userImageSrc = currentImageBase64 ? `data:${currentImageMime};base64,${currentImageBase64}` : null;
@@ -268,8 +290,16 @@
         image: currentImageBase64 ? { mimeType: currentImageMime, data: currentImageBase64 } : null
       };
 
-      input.value = "";
+      inputEl.value = "";
+      inputEl.style.height = 'auto';
       removeSelectedImage();
+
+      // Temporary Loading State
+      const aiRow = document.createElement("div");
+      aiRow.className = "msg-row ai";
+      aiRow.innerHTML = `<div class="msg-bubble">⏳ AI Tashkhees kar raha hai...</div>`;
+      container.appendChild(aiRow);
+      container.scrollTop = container.scrollHeight;
 
       try {
         const res = await fetch('/api/chat', {
@@ -279,12 +309,15 @@
         });
 
         const data = await res.json();
-        const reply = data.reply || "Unable to process request.";
+        const reply = data.reply || "Jawab nahi mil saka. Dobara koshish karein.";
 
-        appendMessage('assistant', reply);
+        let ttsBtn = ('speechSynthesis' in window) ? `<br><button onclick="speakText(\`${reply.replace(/[`"]/g, '')}\`)" style="border:none; background:none; cursor:pointer; opacity:0.7; margin-top:8px; font-size:12px; color:inherit;" title="Listen"><i class="bi bi-volume-up"></i> Suniye</button>` : '';
+
+        aiRow.innerHTML = `<div class="msg-bubble">${formatMarkdownResponse(reply)}${ttsBtn}</div>`;
         messages.push({ role: 'assistant', content: reply });
+        container.scrollTop = container.scrollHeight;
       } catch (err) {
-        appendMessage('assistant', "Network Error: Please check your connection.");
+        aiRow.innerHTML = `<div class="msg-bubble" style="color:#ef4444;">Network Error: Internet connection check karein.</div>`;
       }
     }
 
@@ -295,7 +328,7 @@
     }
 
     function searchChats(query) {
-      // Sidebar chat search handler stub
+      // Sidebar chat search handler
     }
 
     // Enter Key Send (Shift+Enter for newline)
