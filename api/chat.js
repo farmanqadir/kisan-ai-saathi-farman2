@@ -1,4 +1,4 @@
-const VERSION = "v20-structured-multilingual";
+const VERSION = "v21-adaptive-mode-engine";
 
 const MODELS = [
   "gemini-3.5-flash-lite",
@@ -8,44 +8,60 @@ const MODELS = [
   "gemini-3.7-flash",
 ];
 
-const MAX_OUTPUT_TOKENS = 800;
 const PER_MODEL_TIMEOUT_MS = 5500;
 const MAX_MESSAGE_CHARS = 10000;
 const MAX_HISTORY = 6;
 const OFF_TOPIC_TAG = "OFF_TOPIC";
 const OFF_TOPIC_MESSAGE = "Please ask questions related to agriculture only.";
 
-const SYSTEM_PROMPT = `EXPERT AGRICULTURE DIAGNOSTIC SYSTEM (PAKISTAN FOCUS)
+function buildSystemPrompt(mode) {
+  let modeInstruction = "";
 
-You are an evidence-based agricultural diagnostic AI. Reason like an expert agronomist, soil scientist, plant pathologist, and agricultural economist working together for Pakistani farmers (Punjab/South Punjab context).
+  if (mode === "easy") {
+    modeInstruction = `MODE: EASY / AAM FEHMI.
+    - Give extremely simple, easy-to-understand, friendly advice in plain words.
+    - Avoid complex scientific jargon. Max 3-4 bullet points.`;
+  } else if (mode === "fast") {
+    modeInstruction = `MODE: FAST / DIRECT.
+    - Give an ultra-short, direct, 2-to-3 sentence answer.
+    - Zero fluff, immediate solution.`;
+  } else {
+    // Hard / Expert Mode
+    modeInstruction = `MODE: HARD / EXPERT DIAGNOSTIC (26-POINT SYSTEM).
+    - Follow full Agronomist Diagnostic Protocol.
+    - Include Differential Diagnosis, Evidence FOR/AGAINST, Confidence %, Cheapest Verification First, Per-Acre + Total Farm Quantity, and Estimated Cost in PKR.`;
+  }
 
-STRICT LANGUAGE CONSISTENCY RULE (CRITICAL):
-- DETECT THE LANGUAGE OF THE USER'S LAST QUERY IMMEDIATELY.
-- IF THE USER ASKS IN ENGLISH -> YOU MUST RESPOND STRICTLY AND 100% IN ENGLISH.
-- IF THE USER ASKS IN ROMAN URDU -> YOU MUST RESPOND STRICTLY IN ROMAN URDU.
-- IF THE USER ASKS IN URDU SCRIPT -> YOU MUST RESPOND STRICTLY IN URDU SCRIPT.
-- NEVER SWITCH OR MIX LANGUAGES. ALWAYS MATCH THE USER'S INPUT LANGUAGE EXACTLY.
+  return `EXPERT AGRICULTURE DIAGNOSTIC SYSTEM (PAKISTAN FOCUS)
+
+You are an evidence-based agricultural diagnostic AI for Pakistani farmers (Punjab/South Punjab context).
+
+STRICT LENGTH RULE (ADAPTIVE RESPONSE):
+- MATCH THE RESPONSE LENGTH STRICTLY TO THE USER'S QUERY LENGTH AND COMPLEXITY.
+- If the user asks a simple or short question (e.g. "Salam", "DAP ka rate kya hai?"), answer in 1 to 2 short lines only.
+- Do NOT output a full 26-point diagnostic report for small or simple queries.
+- Only provide a full diagnostic breakdown when the user presents a complex crop disease or farm problem.
+
+STRICT LANGUAGE CONSISTENCY RULE:
+- MATCH THE USER'S INPUT LANGUAGE 100% EXACTLY.
+- IF USER ASKS IN ENGLISH -> RESPOND 100% IN ENGLISH.
+- IF USER ASKS IN ROMAN URDU -> RESPOND STRICTLY IN ROMAN URDU.
+- IF USER ASKS IN URDU SCRIPT -> RESPOND STRICTLY IN URDU SCRIPT.
+- NEVER MIX OR SWITCH LANGUAGES.
 
 SCOPE RULE:
 - ONLY answer questions about agriculture, farming, crops, livestock, soil, fertilizers, pesticides, plant diseases, irrigation, weather, and farm machinery.
-- If user greets (hi, hello, salam), reply warmly in 1 short line offering farming help.
-- If message is UNRELATED to agriculture, reply strictly with ONLY: ${OFF_TOPIC_TAG}
+- If greeting, respond warmly in 1 line.
+- If completely UNRELATED to farming, reply strictly with ONLY: ${OFF_TOPIC_TAG}
 
-READABILITY & STRUCTURED FORMATTING PROTOCOL:
-Format your diagnostic report cleanly using markdown structure so it is extremely easy to read:
-- Use bold section headers like **A. Problem Summary**, **B. Key Observations**, **C. Differential Diagnosis**, **D. Confidence Score**, **E. Missing Information**, **F. Safest/Cheapest Verification**, **G. Treatment & Exact Calculations (Per Acre, Total, PKR Cost)**, **H. Decision Tree & Monitoring Plan**.
-- Use bullet points (-) for listing items.
-- Put blank lines between sections for clean spacing.
+${modeInstruction}
 
-26-POINT DIAGNOSTIC RULES:
-1. Diagnose before treatment (never jump directly to sprays).
-2. Rank top 3 probable causes with evidence FOR and AGAINST.
-3. State confidence score percentage.
-4. Recommend cheapest physical check first.
-5. Provide exact per-acre, total farm quantity, and estimated cost in PKR.
-6. Provide an IF-THEN decision tree if treatment fails.`;
+READABILITY & FORMATTING:
+- Use clear bold section headers like **Problem Summary**, **Diagnosis**, **Recommended Action**, **Cost Calculation**.
+- Use clean bullet points (-) and line breaks. Do not overcrowd text.`;
+}
 
-async function callSingleModel(model, apiKey, contents) {
+async function callSingleModel(model, apiKey, contents, systemPrompt, maxTokens) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
@@ -56,11 +72,11 @@ async function callSingleModel(model, apiKey, contents) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: contents,
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          maxOutputTokens: maxTokens,
         },
       }),
       signal: controller.signal,
@@ -99,14 +115,10 @@ module.exports = async function handler(req, res) {
   const startTime = Date.now();
 
   try {
-    let body;
-    try {
-      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    } catch (e) {
-      return res.status(200).json({ reply: "Invalid request format." });
-    }
-
+    let body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const rawMessages = body?.messages;
+    const mode = body?.mode || "hard"; // "easy", "fast", or "hard"
+
     if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
       return res.status(200).json({ reply: "Please write a message." });
     }
@@ -129,6 +141,12 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ reply: "Configuration Error: API Key missing in Vercel." });
     }
 
+    // Set max tokens based on Mode and Query length
+    const isShortQuery = lastMsg.content.length < 30;
+    const maxTokens = (mode === "fast" || isShortQuery) ? 250 : (mode === "easy" ? 450 : 850);
+
+    const systemPrompt = buildSystemPrompt(mode);
+
     const history = messages.slice(-MAX_HISTORY);
     while (history.length && history[0].role !== "user") history.shift();
 
@@ -142,7 +160,7 @@ module.exports = async function handler(req, res) {
     const errors = [];
 
     for (const model of MODELS) {
-      const attempt = await callSingleModel(model, apiKey, formattedContents);
+      const attempt = await callSingleModel(model, apiKey, formattedContents, systemPrompt, maxTokens);
       if (attempt.ok) {
         result = attempt;
         usedModel = model;
