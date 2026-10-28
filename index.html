@@ -47,7 +47,7 @@
         .typing-dots span:nth-child(3) { animation-delay: -0.9s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
 
-        /* Formatted AI Response Styles for Maximum Readability */
+        /* Formatted AI Response Styles */
         .msg-bubble {
           line-height: 1.6;
           font-size: 15px;
@@ -92,6 +92,63 @@
           color: var(--text-primary);
         }
 
+        /* Toast Container */
+        .toast-container {
+          position: fixed;
+          top: 20px; right: 20px;
+          z-index: 10000;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .toast {
+          background: var(--bg-secondary);
+          color: var(--text-primary);
+          border: 1px solid var(--border-color);
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 13px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          animation: slideIn 0.3s ease;
+        }
+        .toast.success { border-left: 4px solid #16a34a; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* TOC Drawer Tray */
+        .toc-tray {
+          position: fixed;
+          right: -280px; top: 80px; width: 260px;
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-color);
+          border-radius: 12px 0 0 12px;
+          box-shadow: -4px 4px 16px rgba(0,0,0,0.2);
+          z-index: 50;
+          transition: right 0.3s ease;
+          padding: 12px;
+        }
+        .toc-tray.active { right: 0; }
+        .toc-header {
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 13px; font-weight: bold; border-bottom: 1px solid var(--border-color);
+          padding-bottom: 8px; margin-bottom: 8px;
+        }
+        .toc-body { max-height: 300px; overflow-y: auto; font-size: 12px; }
+        .toc-item { padding: 6px 8px; cursor: pointer; border-radius: 6px; transition: background 0.2s; }
+        .toc-item:hover { background: var(--card-bg); color: var(--primary-accent); }
+
+        /* Buttons & Inputs */
+        .primary-btn {
+          background-color: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%;
+        }
+        .primary-btn:hover { background-color: #15803d; }
+        .secondary-btn {
+          background-color: transparent; color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%;
+        }
+        .custom-input {
+          width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 13px; outline: none; margin-bottom: 12px;
+        }
+
         /* FAQ Onboarding Chips */
         .faq-container {
           display: grid;
@@ -133,6 +190,29 @@
 </head>
 <body class="h-screen flex overflow-hidden antialiased">
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- TOC Drawer Tray -->
+    <div id="tocTray" class="toc-tray">
+      <div class="toc-header">
+        <span>📋 Response Jump Table</span>
+        <button onclick="toggleTocTray()">✕</button>
+      </div>
+      <div id="tocContent" class="toc-body"></div>
+    </div>
+
+    <!-- Image Generator Modal -->
+    <div id="imageModal" class="custom-modal">
+      <div class="modal-content">
+        <h3>🖼️ Free AI Farming Image Generator</h3>
+        <input type="text" id="imgPromptInput" placeholder="e.g. Healthy wheat crop in Punjab farm..." class="custom-input">
+        <button onclick="generateFreeImage()" class="primary-btn">Generate Picture</button>
+        <div id="imgResultContainer" style="margin-top:15px; text-align:center;"></div>
+        <button onclick="closeModal('imageModal')" class="secondary-btn" style="margin-top:10px;">Close</button>
+      </div>
+    </div>
+
     <!-- Mobile Sidebar Backdrop Overlay -->
     <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-950/80 z-30 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
 
@@ -151,6 +231,9 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-1">
+                    <button onclick="openModal('imageModal')" class="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg border border-slate-800 bg-slate-900 transition" title="Generate AI Farming Image">
+                        <i class="fa-solid fa-image text-sm"></i>
+                    </button>
                     <button onclick="toggleTheme()" class="text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg border border-slate-800 bg-slate-900 transition" title="Toggle Light/Dark Theme">
                         <i class="fa-solid fa-circle-half-stroke text-sm"></i>
                     </button>
@@ -169,16 +252,19 @@
                     </span>
                     <span class="text-[10px] text-slate-500 border border-slate-800 px-1.5 py-0.5 rounded hidden md:inline">Ctrl K</span>
                 </button>
+                
+                <!-- Live Search Chats Input -->
+                <input type="text" oninput="searchChats(this.value)" placeholder="Search saved chats..." class="mt-2 w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none focus:border-emerald-500">
             </div>
 
             <!-- History Section -->
-            <div class="px-4 pt-2 pb-1 flex items-center justify-between">
+            <div class="px-4 pt-1 pb-1 flex items-center justify-between">
                 <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Saved Chats</span>
                 <span id="historyCount" class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">0</span>
             </div>
             
             <!-- History List -->
-            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-270px)] custom-scrollbar"></div>
+            <div id="chatHistoryList" class="px-2 space-y-1 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar"></div>
         </div>
 
         <!-- User Profile & Auth Status -->
@@ -218,6 +304,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
+                <button onclick="toggleTocTray()" class="text-[11px] px-2 py-1 rounded border hidden md:block" style="border-color: var(--border-color); background-color: var(--card-bg);">📋 Jump TOC</button>
                 <div id="guestLimitBadge" class="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-lg flex items-center space-x-1">
                     <i class="fa-solid fa-shield-halved text-[10px]"></i>
                     <span id="guestCountText">5 Free Left</span>
@@ -359,7 +446,7 @@
     <!-- Forgot Password Modal -->
     <div id="forgotPassModal" class="custom-modal">
         <div class="modal-content relative">
-            <button onclick="document.getElementById('forgotPassModal').classList.remove('active')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+            <button onclick="closeModal('forgotPassModal')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
             <h3 class="text-sm font-bold mb-3">Reset Password</h3>
@@ -374,7 +461,7 @@
     <!-- Profile Settings Modal -->
     <div id="settingsModal" class="custom-modal">
         <div class="modal-content relative">
-            <button onclick="document.getElementById('settingsModal').classList.remove('active')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+            <button onclick="closeModal('settingsModal')" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
             <h3 class="text-sm font-bold mb-3">Account Settings</h3>
@@ -390,7 +477,124 @@
     <!-- Script Logic -->
     <script>
         // ==========================================
-        // 1. DYNAMIC THEME SWITCHER
+        // 1. TOAST NOTIFICATIONS
+        // ==========================================
+        function showToast(msg, type = "info") {
+          const container = document.getElementById("toastContainer");
+          if (!container) return;
+          const toast = document.createElement("div");
+          toast.className = `toast ${type}`;
+          toast.textContent = msg;
+          container.appendChild(toast);
+          setTimeout(() => toast.remove(), 3500);
+        }
+
+        // ==========================================
+        // 2. UNLIMITED FREE AI IMAGE GENERATOR
+        // ==========================================
+        function generateFreeImage() {
+          const prompt = document.getElementById("imgPromptInput")?.value.trim();
+          if (!prompt) { showToast("Please enter an image description.", "error"); return; }
+          
+          const container = document.getElementById("imgResultContainer");
+          container.innerHTML = "⏳ Generating HD picture...";
+
+          const encoded = encodeURIComponent("agricultural " + prompt + " realistic high quality photo");
+          const imgUrl = `https://image.pollinations.ai/prompt/${encoded}?width=800&height=500&nologo=true`;
+
+          const img = new Image();
+          img.src = imgUrl;
+          img.style.cssText = "width:100%; border-radius:8px; margin-top:10px;";
+          img.onload = () => {
+            container.innerHTML = `<img src="${imgUrl}"><br><a href="${imgUrl}" target="_blank" download class="primary-btn" style="display:inline-block; margin-top:8px; text-decoration:none;">Download HD Image</a>`;
+            showToast("Picture generated!", "success");
+          };
+        }
+
+        // ==========================================
+        // 3. TABLE OF CONTENTS (TOC) JUMP TRAY
+        // ==========================================
+        function buildTocFromResponse(responseText) {
+          const container = document.getElementById("tocContent");
+          if (!container) return;
+          
+          const headers = responseText.match(/\*\*(.*?)\*\*/g) || [];
+          if (headers.length < 2) {
+            document.getElementById("tocTray")?.classList.remove("active");
+            return;
+          }
+
+          container.innerHTML = headers.map((h, i) => {
+            const clean = h.replace(/\*\*/g, "");
+            return `<div class="toc-item" onclick="jumpToSection('${clean}')">${i + 1}. ${clean}</div>`;
+          }).join("");
+
+          document.getElementById("tocTray")?.classList.add("active");
+        }
+
+        function toggleTocTray() {
+          document.getElementById("tocTray")?.classList.toggle("active");
+        }
+
+        function jumpToSection(title) {
+            const bubbles = document.querySelectorAll('.msg-bubble');
+            for (const b of bubbles) {
+                if (b.innerText.includes(title)) {
+                    b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    break;
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. PERSISTENT SESSION ON RELOAD
+        // ==========================================
+        async function checkPersistentSession() {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          if (!token) return;
+
+          try {
+            const res = await fetch("/api/auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+              body: JSON.stringify({ action: "me" })
+            });
+            const data = await res.json();
+            if (data.ok && data.user) {
+              showToast(`Welcome back, ${data.user.name || data.user.username}!`, "success");
+              updateUIAuthStatus(data.user);
+              await fetchUserCloudHistory();
+            }
+          } catch (e) {}
+        }
+
+        // ==========================================
+        // 5. LIVE CHAT SEARCH IN SIDEBAR
+        // ==========================================
+        async function searchChats(query) {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          if (!token) {
+              // Local filter if not logged in
+              const filtered = userChatsList.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+              renderSidebarChats(filtered);
+              return;
+          }
+
+          try {
+              const res = await fetch("/api/history", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                body: JSON.stringify({ action: "list", search: query })
+              });
+              const data = await res.json();
+              if (data.ok && Array.isArray(data.chats)) {
+                renderSidebarChats(data.chats);
+              }
+          } catch(e) {}
+        }
+
+        // ==========================================
+        // 6. DYNAMIC THEME SWITCHER
         // ==========================================
         function toggleTheme() {
           const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
@@ -400,7 +604,7 @@
         }
 
         // ==========================================
-        // 2. READABLE RESPONSE MARKDOWN FORMATTER
+        // 7. READABLE RESPONSE MARKDOWN FORMATTER
         // ==========================================
         function formatResponseToHTML(text) {
           if (!text) return "";
@@ -417,14 +621,14 @@
         }
 
         // ==========================================
-        // 3. MULTI-LINGUAL VOICE RECOGNITION
+        // 8. MULTI-LINGUAL VOICE RECOGNITION
         // ==========================================
         let isListening = false;
         let recognition = null;
 
         function toggleVoiceInput() {
           if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("Voice recognition is not supported in this browser.");
+            showToast("Voice recognition is not supported in this browser.", "error");
             return;
           }
 
@@ -466,7 +670,7 @@
         }
 
         // ==========================================
-        // 4. PIN CHAT & CONFIRM DELETE SYNC
+        // 9. PIN CHAT & CONFIRM DELETE SYNC
         // ==========================================
         let chatToDeleteId = null;
 
@@ -493,8 +697,9 @@
             
             closeDeleteModal();
             fetchUserCloudHistory();
+            showToast("Chat deleted successfully.", "success");
           } catch (err) {
-            alert("Failed to delete chat.");
+            showToast("Failed to delete chat.", "error");
           }
         }
 
@@ -511,7 +716,7 @@
         }
 
         // ==========================================
-        // 5. PRE-CONFIGURED ONBOARDING FAQS
+        // 10. PRE-CONFIGURED ONBOARDING FAQS
         // ==========================================
         const FAQ_PROMPTS = [
           "🌾 Gandum ki fasal mein pehli khad kab aur kitni deni chahiye?",
@@ -539,19 +744,26 @@
         }
 
         // ==========================================
-        // 6. USER PROFILE & FORGOT PASSWORD MODALS
+        // 11. MODAL UTILS
         // ==========================================
+        function openModal(modalId) {
+            document.getElementById(modalId)?.classList.add("active");
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId)?.classList.remove("active");
+        }
+
         function openSettingsModal() {
             if (!isUserLoggedIn()) {
                 toggleAuthModal();
                 return;
             }
-            document.getElementById("settingsModal")?.classList.add("active");
+            openModal("settingsModal");
         }
 
         function openForgotPassModal() {
             toggleAuthModal();
-            document.getElementById("forgotPassModal")?.classList.add("active");
+            openModal("forgotPassModal");
         }
 
         async function updateUserProfile() {
@@ -567,11 +779,11 @@
           });
           const data = await res.json();
           if (data.ok) {
-            alert("Profile updated successfully!");
-            document.getElementById("settingsModal")?.classList.remove("active");
+            showToast("Profile updated successfully!", "success");
+            closeModal("settingsModal");
             checkCurrentSession();
           } else {
-            alert("Error: " + data.error);
+            showToast("Error: " + data.error, "error");
           }
         }
 
@@ -586,15 +798,15 @@
           });
           const data = await res.json();
           if (data.ok) {
-            alert(data.message || "Password reset successfully!");
-            document.getElementById("forgotPassModal")?.classList.remove("active");
+            showToast(data.message || "Password reset successfully!", "success");
+            closeModal("forgotPassModal");
           } else {
-            alert("Error: " + data.error);
+            showToast("Error: " + data.error, "error");
           }
         }
 
         // ==========================================
-        // 7. CORE SYSTEM APP LOGIC
+        // 12. CORE SYSTEM APP LOGIC
         // ==========================================
         const AUTH_TOKEN_KEY = "kisan_auth_token";
         let userChatsList = [];
@@ -662,6 +874,7 @@
             renderHistoryList();
             clearChatScreen();
             updateUIAuthStatus(null);
+            showToast("Signed out successfully.", "info");
         }
 
         function clearChatScreen() {
@@ -677,13 +890,7 @@
             document.documentElement.setAttribute("data-theme", savedTheme);
 
             renderOnboardingFAQs();
-
-            if (isUserLoggedIn()) {
-                fetchUserCloudHistory();
-                checkCurrentSession();
-            } else {
-                onSignOut();
-            }
+            checkPersistentSession();
         });
 
         async function apiAuth(action, data = {}) {
@@ -705,40 +912,39 @@
 
         async function userSignUp(emailOrUsername, password, name = "") {
             if (!emailOrUsername || !password) {
-                alert("Please enter username/email and password.");
+                showToast("Please enter username/email and password.", "error");
                 return;
             }
             const res = await apiAuth("signup", { username: emailOrUsername, password, name });
             if (res.ok && res.token) {
                 await onLoginSuccess(res.token);
-                alert("Account created successfully! Welcome " + (res.user.name || res.user.id));
+                showToast("Account created successfully! Welcome " + (res.user.name || res.user.id), "success");
                 updateUIAuthStatus(res.user);
                 toggleAuthModal();
             } else {
-                alert("Sign Up Error: " + (res.error || "Failed to register"));
+                showToast("Sign Up Error: " + (res.error || "Failed to register"), "error");
             }
         }
 
         async function userSignIn(emailOrUsername, password) {
             if (!emailOrUsername || !password) {
-                alert("Please enter username/email and password.");
+                showToast("Please enter username/email and password.", "error");
                 return;
             }
             const res = await apiAuth("login", { username: emailOrUsername, password });
             if (res.ok && res.token) {
                 await onLoginSuccess(res.token);
-                alert("Signed in successfully!");
+                showToast("Signed in successfully!", "success");
                 updateUIAuthStatus(res.user);
                 toggleAuthModal();
             } else {
-                alert("Sign In Error: " + (res.error || "Invalid credentials"));
+                showToast("Sign In Error: " + (res.error || "Invalid credentials"), "error");
             }
         }
 
         async function userSignOut() {
             await apiAuth("logout");
             onSignOut();
-            alert("Signed out!");
         }
 
         async function checkCurrentSession() {
@@ -820,6 +1026,7 @@
                     await new Promise(r => setTimeout(r, TOKEN_DELAY_MS));
                 }
             }
+            buildTocFromResponse(text);
         }
 
         function appendMessage(sender, text, imgData = null) {
@@ -851,7 +1058,7 @@
             if (isSending) return;
 
             if (!isUserLoggedIn() && guestMessageCount >= MAX_GUEST_LIMIT) {
-                alert("Free limit reached! Please Sign In / Sign Up to continue chatting.");
+                showToast("Free limit reached! Please Sign In / Sign Up to continue.", "error");
                 toggleAuthModal();
                 return;
             }
@@ -1117,6 +1324,7 @@
             chatMessages.classList.add('hidden');
             document.getElementById('welcomeScreen').classList.remove('hidden');
             renderHistoryList();
+            document.getElementById("tocTray")?.classList.remove("active");
         }
 
         chatInput.addEventListener('input', function() {
