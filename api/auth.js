@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const VERSION = "auth-v5-phone-otp-auth";
+const VERSION = "auth-v6-strict-otp-verification";
 const SESSION_DAYS = 90;
 
 function findEnv(names) {
@@ -43,7 +43,7 @@ function verifyPassword(password, salt, hash) {
   }
 }
 
-// Phone Number Normalizer (e.g., 03001234567 or +923001234567 -> 923001234567)
+// Mobile Number Normalizer (e.g. 03001234567 -> 923001234567)
 function normalizePhone(v) {
   let str = String(v || "").trim().toLowerCase();
   if (/^03\d{9}$/.test(str)) str = "92" + str.slice(1);
@@ -79,26 +79,68 @@ module.exports = async function handler(req, res) {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const action = String(body.action || "").toLowerCase();
 
-    // 1. MOBILE PHONE REGISTER / SIGNUP
-    if (action === "signup") {
-      const phone = normalizePhone(body.phone || body.username);
-      const name = String(body.name || "").trim().slice(0, 40);
-      const password = String(body.password || "");
+    // ==========================================
+    // 1. SIGNUP STEP 1: REQUEST REGISTRATION OTP
+    // ==========================================
+    if (action === "request-signup-otp") {
+      const phone = normalizePhone(body.phone);
+      if (!phone || phone.length < 10) {
+        return send(res, { ok: false, error: "Please enter a valid Pakistani mobile phone number (03001234567)." });
+      }
 
-      if (!phone || phone.length < 10) return send(res, { ok: false, error: "Valid Pakistani mobile phone number required (e.g. 03001234567)." });
-      if (password.length < 6) return send(res, { ok: false, error: "Password must be at least 6 characters." });
+      // Check if phone is already registered
+      const existing = await redis("GET", "user:" + phone);
+      if (existing) {
+        return send(res, { ok: false, error: "This mobile phone number is already registered. Please sign in instead." });
+      }
+
+      // Generate 4-Digit Registration OTP
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await redis("SET", "signup_otp:" + phone, otp, "EX", 600); // Expires in 10 mins
+
+      return send(res, {
+        ok: true,
+        message: "Registration OTP code generated!",
+        otp: otp
+      });
+    }
+
+    // ==========================================
+    // 2. SIGNUP STEP 2: VERIFY OTP & CREATE USER
+    // ==========================================
+    if (action === "verify-and-signup") {
+      const phone = normalizePhone(body.phone);
+      const userOtp = String(body.otp || "").trim();
+      const password = String(body.password || "");
+      const name = String(body.name || "").trim().slice(0, 40);
+
+      if (!phone || !userOtp || password.length < 6) {
+        return send(res, { ok: false, error: "Mobile number, OTP code, and 6+ char password required." });
+      }
+
+      // STRICT OTP CHECK AGAINST REDIS
+      const storedOtp = await redis("GET", "signup_otp:" + phone);
+      if (!storedOtp || storedOtp !== userOtp) {
+        return send(res, { ok: false, error: "Incorrect or expired Registration OTP code." });
+      }
 
       const { salt, hash } = hashPassword(password);
       const user = { id: phone, phone: phone, name: name || phone, salt: salt, hash: hash, createdAt: Date.now() };
 
       const created = await redis("SET", "user:" + phone, JSON.stringify(user), "NX");
-      if (created !== "OK") return send(res, { ok: false, error: "This mobile phone number is already registered." });
+      if (created !== "OK") {
+        return send(res, { ok: false, error: "This mobile phone number is already registered." });
+      }
 
+      await redis("DEL", "signup_otp:" + phone); // Clear used OTP
       const token = await createSession(phone);
+
       return send(res, { ok: true, token: token, user: { id: phone, name: user.name } });
     }
 
-    // 2. MOBILE PHONE LOGIN
+    // ==========================================
+    // 3. LOGIN (EXISTING ACCOUNT)
+    // ==========================================
     if (action === "login") {
       const phone = normalizePhone(body.phone || body.username);
       const password = String(body.password || "");
@@ -107,14 +149,16 @@ module.exports = async function handler(req, res) {
       const user = raw ? JSON.parse(raw) : null;
 
       if (!user || !verifyPassword(password, user.salt, user.hash)) {
-        return send(res, { ok: false, error: "Incorrect mobile number or password." });
+        return send(res, { ok: false, error: "Incorrect mobile phone number or password." });
       }
 
       const token = await createSession(phone);
       return send(res, { ok: true, token: token, user: { id: phone, name: user.name || phone } });
     }
 
-    // 3. AUTO SESSION RESTORE ON RELOAD
+    // ==========================================
+    // 4. AUTO SESSION RESTORE ON RELOAD
+    // ==========================================
     if (action === "me") {
       const token = getToken(req, body);
       if (!token) return send(res, { ok: false, error: "Not signed in." });
@@ -125,38 +169,47 @@ module.exports = async function handler(req, res) {
       return send(res, { ok: true, user: { id: id, name: user.name || id } });
     }
 
-    // 4. FORGOT PASSWORD - STEP 1: REQUEST AUTHORIZATION CODE (OTP)
-    if (action === "request-auth-code") {
+    // ==========================================
+    // 5. FORGOT PASSWORD STEP 1: REQUEST OTP
+    // ==========================================
+    if (action === "request-forgot-otp") {
       const phone = normalizePhone(body.phone);
-      if (!phone || phone.length < 10) return send(res, { ok: false, error: "Please enter a valid registered mobile number." });
+      if (!phone || phone.length < 10) {
+        return send(res, { ok: false, error: "Please enter a valid registered mobile number." });
+      }
 
       const raw = await redis("GET", "user:" + phone);
-      if (!raw) return send(res, { ok: false, error: "This mobile number is not registered." });
+      if (!raw) {
+        return send(res, { ok: false, error: "This mobile number is not registered in our records." });
+      }
 
-      // Generate 4-digit Authorization Code (OTP)
-      const authCode = Math.floor(1000 + Math.random() * 9000).toString();
-      await redis("SET", "authcode:" + phone, authCode, "EX", 600); // 10 minutes expiry
+      // Generate 4-Digit Reset OTP
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await redis("SET", "forgot_otp:" + phone, otp, "EX", 600); // 10 mins expiry
 
       return send(res, {
         ok: true,
-        message: "Authorization code sent to mobile number " + phone,
-        authCode: authCode // Sent to frontend for instant authorization verification
+        message: "Reset OTP code generated!",
+        otp: otp
       });
     }
 
-    // 5. FORGOT PASSWORD - STEP 2: VERIFY CODE & RESET PASSWORD
-    if (action === "reset-password-with-code") {
+    // ==========================================
+    // 6. FORGOT PASSWORD STEP 2: VERIFY OTP & RESET
+    // ==========================================
+    if (action === "verify-and-reset-password") {
       const phone = normalizePhone(body.phone);
-      const code = String(body.authCode || "").trim();
+      const userOtp = String(body.otp || "").trim();
       const newPassword = String(body.newPassword || "");
 
-      if (!phone || !code || newPassword.length < 6) {
-        return send(res, { ok: false, error: "Mobile number, 4-digit code, and 6+ char new password required." });
+      if (!phone || !userOtp || newPassword.length < 6) {
+        return send(res, { ok: false, error: "Mobile number, OTP code, and new password required." });
       }
 
-      const savedCode = await redis("GET", "authcode:" + phone);
-      if (!savedCode || savedCode !== code) {
-        return send(res, { ok: false, error: "Invalid or expired authorization code." });
+      // STRICT OTP CHECK AGAINST REDIS
+      const storedOtp = await redis("GET", "forgot_otp:" + phone);
+      if (!storedOtp || storedOtp !== userOtp) {
+        return send(res, { ok: false, error: "Incorrect or expired Password Reset OTP code." });
       }
 
       const raw = await redis("GET", "user:" + phone);
@@ -168,12 +221,14 @@ module.exports = async function handler(req, res) {
       user.hash = hash;
 
       await redis("SET", "user:" + phone, JSON.stringify(user));
-      await redis("DEL", "authcode:" + phone); // Clear used code
+      await redis("DEL", "forgot_otp:" + phone); // Clear used OTP
 
       return send(res, { ok: true, message: "Password reset successful! Please sign in with your new password." });
     }
 
-    // 6. LOGOUT
+    // ==========================================
+    // 7. LOGOUT
+    // ==========================================
     if (action === "logout") {
       const token = getToken(req, body);
       if (token) await redis("DEL", "session:" + token);
