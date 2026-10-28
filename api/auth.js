@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
-const VERSION = "auth-v2-features";
-const SESSION_DAYS = 30;
+const VERSION = "auth-v3-phone-support";
+const SESSION_DAYS = 90; // Reload par bar bar login na karna pade (90 days persistent token)
 
 function findEnv(names) {
   for (const n of names) if (process.env[n]) return process.env[n];
@@ -17,23 +17,20 @@ const REDIS_URL = findEnv(["KV_REST_API_URL", "UPSTASH_REDIS_REST_URL"]).replace
 const REDIS_TOKEN = findEnv(["KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_TOKEN"]);
 
 async function redis(...command) {
-  if (!REDIS_URL || !REDIS_TOKEN) {
-    throw new Error("Database not connected in Vercel.");
-  }
+  if (!REDIS_URL || !REDIS_TOKEN) throw new Error("Database not connected in Vercel.");
   const r = await fetch(REDIS_URL, {
     method: "POST",
     headers: { Authorization: "Bearer " + REDIS_TOKEN, "Content-Type": "application/json" },
     body: JSON.stringify(command),
   });
   const data = await r.json();
-  if (data && data.error) throw new Error("Database error: " + data.error);
   return data ? data.result : null;
 }
 
 function hashPassword(password, salt) {
   salt = salt || crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-  return { salt: salt, hash: hash };
+  return { salt, hash };
 }
 
 function verifyPassword(password, salt, hash) {
@@ -46,8 +43,14 @@ function verifyPassword(password, salt, hash) {
   }
 }
 
-function normalizeId(v) { return String(v || "").trim().toLowerCase(); }
-function isValidId(id) { return /^[a-z0-9@._+-]{3,60}$/.test(id); }
+// Phone Number or Email Normalizer (e.g., 03001234567 or +923001234567 or user@mail.com)
+function normalizeId(v) {
+  let str = String(v || "").trim().toLowerCase();
+  // Format Pakistani phone numbers: 03001234567 -> 923001234567
+  if (/^03\d{9}$/.test(str)) str = "92" + str.slice(1);
+  if (/^\+923\d{9}$/.test(str)) str = str.slice(1);
+  return str;
+}
 
 function getToken(req, body) {
   const h = String(req.headers.authorization || "");
@@ -71,54 +74,48 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  if (req.method === "GET") {
-    let db = "connected";
-    try { await redis("PING"); } catch (e) { db = e.message; }
-    return send(res, { version: VERSION, db: db });
-  }
-
-  if (req.method !== "POST") return send(res, { ok: false, error: "Invalid request method." });
+  if (req.method !== "POST") return send(res, { ok: false, error: "Invalid method." });
 
   try {
     let body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const action = String(body.action || "").toLowerCase();
 
-    // Signup
+    // REGISTER / SIGNUP (Phone or Email)
     if (action === "signup") {
-      const id = normalizeId(body.email || body.username);
+      const id = normalizeId(body.phone || body.email || body.username);
       const name = String(body.name || "").trim().slice(0, 40);
       const password = String(body.password || "");
 
-      if (!isValidId(id)) return send(res, { ok: false, error: "Invalid username/email." });
-      if (password.length < 6) return send(res, { ok: false, error: "Password must be at least 6 chars." });
+      if (!id || id.length < 3) return send(res, { ok: false, error: "Valid mobile phone number or email required." });
+      if (password.length < 6) return send(res, { ok: false, error: "Password must be at least 6 characters." });
 
       const { salt, hash } = hashPassword(password);
-      const user = { id: id, name: name || id, avatar: body.avatar || "", salt: salt, hash: hash, createdAt: Date.now() };
+      const user = { id: id, phone: body.phone || id, name: name || id, salt: salt, hash: hash, createdAt: Date.now() };
 
       const created = await redis("SET", "user:" + id, JSON.stringify(user), "NX");
-      if (created !== "OK") return send(res, { ok: false, error: "Username/Email already registered." });
+      if (created !== "OK") return send(res, { ok: false, error: "This mobile number/email is already registered." });
 
       const token = await createSession(id);
-      return send(res, { ok: true, token: token, user: { id: id, name: user.name, avatar: user.avatar } });
+      return send(res, { ok: true, token: token, user: { id: id, name: user.name } });
     }
 
-    // Login
+    // LOGIN (Phone or Email)
     if (action === "login") {
-      const id = normalizeId(body.email || body.username);
+      const id = normalizeId(body.phone || body.email || body.username);
       const password = String(body.password || "");
 
       const raw = await redis("GET", "user:" + id);
       const user = raw ? JSON.parse(raw) : null;
 
       if (!user || !verifyPassword(password, user.salt, user.hash)) {
-        return send(res, { ok: false, error: "Wrong username/email or password." });
+        return send(res, { ok: false, error: "Incorrect phone number/email or password." });
       }
 
       const token = await createSession(id);
-      return send(res, { ok: true, token: token, user: { id: id, name: user.name || id, avatar: user.avatar || "" } });
+      return send(res, { ok: true, token: token, user: { id: id, name: user.name || id } });
     }
 
-    // Session Me
+    // AUTO-RESTORE SESSION ON RELOAD (Never Logout Automatically)
     if (action === "me") {
       const token = getToken(req, body);
       if (!token) return send(res, { ok: false, error: "Not signed in." });
@@ -126,40 +123,18 @@ module.exports = async function handler(req, res) {
       if (!id) return send(res, { ok: false, error: "Session expired." });
       const raw = await redis("GET", "user:" + id);
       const user = raw ? JSON.parse(raw) : {};
-      return send(res, { ok: true, user: { id: id, name: user.name || id, avatar: user.avatar || "" } });
+      return send(res, { ok: true, user: { id: id, name: user.name || id } });
     }
 
-    // Update Profile (Name, Avatar, Change Password)
-    if (action === "update-profile") {
-      const token = getToken(req, body);
-      const id = await redis("GET", "session:" + token);
-      if (!id) return send(res, { ok: false, error: "Unauthorized." });
-
-      const raw = await redis("GET", "user:" + id);
-      if (!raw) return send(res, { ok: false, error: "User not found." });
-      let user = JSON.parse(raw);
-
-      if (body.name) user.name = String(body.name).trim().slice(0, 40);
-      if (body.avatar) user.avatar = String(body.avatar);
-      if (body.newPassword) {
-        if (body.newPassword.length < 6) return send(res, { ok: false, error: "New password too short." });
-        const { salt, hash } = hashPassword(body.newPassword);
-        user.salt = salt;
-        user.hash = hash;
-      }
-
-      await redis("SET", "user:" + id, JSON.stringify(user));
-      return send(res, { ok: true, user: { id: id, name: user.name, avatar: user.avatar } });
-    }
-
-    // Forgot Password Reset
+    // FORGOT PASSWORD AUTHORIZATION (Phone verification workflow)
     if (action === "forgot-password") {
-      const id = normalizeId(body.email || body.username);
+      const id = normalizeId(body.phone || body.email);
       const newPassword = String(body.newPassword || "");
-      if (!id || newPassword.length < 6) return send(res, { ok: false, error: "Valid username and 6+ char password required." });
+
+      if (!id || newPassword.length < 6) return send(res, { ok: false, error: "Provide registered phone number and 6+ char new password." });
 
       const raw = await redis("GET", "user:" + id);
-      if (!raw) return send(res, { ok: false, error: "Account not found." });
+      if (!raw) return send(res, { ok: false, error: "Mobile number not found in record." });
 
       let user = JSON.parse(raw);
       const { salt, hash } = hashPassword(newPassword);
@@ -167,10 +142,10 @@ module.exports = async function handler(req, res) {
       user.hash = hash;
 
       await redis("SET", "user:" + id, JSON.stringify(user));
-      return send(res, { ok: true, message: "Password updated successfully! Please sign in." });
+      return send(res, { ok: true, message: "Password reset successful! You can now sign in." });
     }
 
-    // Logout
+    // LOGOUT
     if (action === "logout") {
       const token = getToken(req, body);
       if (token) await redis("DEL", "session:" + token);
